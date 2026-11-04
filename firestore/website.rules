@@ -2,15 +2,21 @@ rules_version = '2';
 // DRAFT - NOT DEPLOYED. Rules for the Ijaye website's own collections in project ccc-data-aarinat.
 // Firestore has ONE rules file per project, so when approved the block marked "WEBSITE" below is pasted
 // into the Parish Portal's firestore.rules (CCC-DATA/firestore/firestore.rules) and deployed from there.
-// The helper functions at the top already exist in the Portal file with the same meaning.
+// The helper functions at the top, users/{uid} self-read, publicInfo and bibleReadings already exist in the
+// Portal file with the same meaning (copied here only so the emulator tests run on this file alone).
 //
 // Collections:
-//   webSite/config         { parishId }            which Portal parish is Ijaye. Super Admin only.
-//   webSite/home           { serviceTimes: [...] } public page content. Ijaye parish admin edits.
+//   webSite/config         { parishId }            which Portal parish is Ijaye. Public (an id, not private). Super Admin writes.
+//   webSite/home           { serviceTimes, media } public page content + media links. Ijaye parish admin edits (Settings page).
 //   webAccounts/{uid}      { memberNo, parishId, displayName, status, mustChangePassword, ... }
 //                          created ONLY by the Cloud Function (Admin SDK). No passwords, ever.
 //   webAudit/{id}          who issued / reset which login. Written ONLY by the Cloud Function.
-// Website members have no users/{uid} doc, so every Portal rule (members, giving, ...) denies them.
+//   webWall/{postId}       members' wall posts (+ birthday posts written by the Cloud Function). Never deleted: hidden.
+//   webWall/{postId}/likes/{uid}  one like per member.
+//   webComments/{id}       comments. Members' show at once; visitors' wait as 'Pending' until an admin approves.
+//   webModLog/{id}         moderation audit trail (who approved / hid what, when). Append-only.
+//   parishes/{p}/rosters   (Portal) PUBLISHED rosters become readable by that parish's website members.
+// Website members have no users/{uid} doc, so every other Portal rule (members, giving, ...) denies them.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -24,25 +30,51 @@ service cloud.firestore {
       return role() == 'parish_admin' && profile().parishId == parishId
         && get(docAt('parishes/' + parishId)).data.status == 'Approved';
     }
+    function str(v, max) { return v is string && v.size() > 0 && v.size() <= max; }
+    // ---- copies of existing Portal rules (do NOT paste these; the Portal already has them) ----
+    match /users/{uid} { allow read: if signedIn() && request.auth.uid == uid; }
+    match /publicInfo/{parishId} { allow read: if true; }
+    match /bibleReadings/{id} { allow read: if true; }
 
     // ===================== WEBSITE (paste from here) =====================
     function ijayeParish() {
       return exists(docAt('webSite/config')) ? get(docAt('webSite/config')).data.parishId : '__none__';
     }
     function isIjayeAdmin() { return isParishAdminOf(ijayeParish()); }
+    function isModerator() { return isIjayeAdmin() || isSuper(); }
+    function webAcct() { return get(docAt('webAccounts/' + request.auth.uid)).data; }
+    // An active Ijaye website member who has already chosen their own password.
+    function isWebMember() {
+      return signedIn() && exists(docAt('webAccounts/' + request.auth.uid))
+        && webAcct().status == 'Active' && webAcct().mustChangePassword == false && webAcct().parishId == ijayeParish();
+    }
+    function optUrl(m, k, re) { return !(k in m) || m[k] == '' || (m[k] is string && m[k].size() <= 300 && m[k].matches(re)); }
+    function optId(m, k, re) { return !(k in m) || m[k] == '' || (m[k] is string && m[k].matches(re)); }
+    function validMedia(m) {
+      return m is map && m.keys().hasOnly(['youtubeChannelId', 'youtubeUrl', 'playlistId', 'pastVideos', 'facebookUrl', 'tiktokUrl', 'instagramUrl'])
+        && optId(m, 'youtubeChannelId', '^UC[A-Za-z0-9_-]{22}$')
+        && optId(m, 'playlistId', '^(PL|UU|OL|FL)[A-Za-z0-9_-]{10,40}$')
+        && optUrl(m, 'youtubeUrl', '^https://(www\\.|m\\.)?youtube\\.com/[^\\s"<>]*$')
+        && optUrl(m, 'facebookUrl', '^https://(www\\.|m\\.|web\\.)?facebook\\.com/[^\\s"<>]*$')
+        && optUrl(m, 'tiktokUrl', '^https://(www\\.)?tiktok\\.com/[^\\s"<>]*$')
+        && optUrl(m, 'instagramUrl', '^https://(www\\.)?instagram\\.com/[^\\s"<>]*$')
+        && (!('pastVideos' in m) || (m.pastVideos is list && m.pastVideos.size() <= 12));
+    }
 
     match /webSite/config {
-      allow read: if isSuper() || isIjayeAdmin();
+      allow read: if true;   // only the Portal parish id, so visitors can load that parish's public info
       allow write: if isSuper()
         && request.resource.data.keys().hasOnly(['parishId', 'updatedAt'])
         && request.resource.data.parishId is string && request.resource.data.parishId.size() > 0;
     }
 
     match /webSite/home {
-      allow read: if true;   // public page content
-      allow write: if (isIjayeAdmin() || isSuper())
-        && request.resource.data.keys().hasOnly(['serviceTimes', 'updatedAt', 'updatedBy'])
-        && request.resource.data.serviceTimes is list && request.resource.data.serviceTimes.size() <= 12;
+      allow read: if true;   // public page content and media links
+      allow write: if isModerator()
+        && request.resource.data.keys().hasOnly(['serviceTimes', 'media', 'updatedAt', 'updatedBy'])
+        && (!('serviceTimes' in request.resource.data) || (request.resource.data.serviceTimes is list && request.resource.data.serviceTimes.size() <= 12))
+        && (!('media' in request.resource.data) || validMedia(request.resource.data.media))
+        && (!('updatedBy' in request.resource.data) || request.resource.data.updatedBy == request.auth.uid);
     }
 
     match /webAccounts/{uid} {
@@ -60,6 +92,89 @@ service cloud.firestore {
     match /webAudit/{id} {
       allow read: if isIjayeAdmin() || isSuper();
       allow write: if false;            // Cloud Function (Admin SDK) only
+    }
+
+    // ---- Duty roster (Portal collection). PASTE INTO the Portal's existing `match /rosters/{id}` read line as:
+    //   allow read: if isParishAdminOf(parishId) || (resource.data.status == 'Published' && isWebMember() && parishId == ijayeParish());
+    match /parishes/{parishId}/rosters/{id} {
+      allow read: if resource.data.status == 'Published' && isWebMember() && parishId == ijayeParish();
+    }
+
+    // ---- Members' wall. No private messages exist anywhere: everything here is a wall post or a comment.
+    // Moderation changes only `status` (Visible <-> Hidden), bumps modVersion and MUST write a webModLog entry in the
+    // same batch. Nothing is ever deleted.
+    function moderated(target) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'modVersion', 'moderatedBy', 'moderatedAt'])
+        && request.resource.data.status in ['Visible', 'Hidden']
+        && request.resource.data.modVersion == resource.data.modVersion + 1
+        && request.resource.data.moderatedBy == request.auth.uid && request.resource.data.moderatedAt == request.time
+        && existsAfter(docAt('webModLog/' + target + '_' + string(request.resource.data.modVersion)));
+    }
+    match /webWall/{postId} {
+      allow read: if isModerator()
+        || (isWebMember() && (resource.data.status == 'Visible' || resource.data.authorUid == request.auth.uid))
+        || (resource.data.status == 'Visible' && resource.data.visibility == 'public');
+      allow create: if isWebMember()
+        && request.resource.data.keys().hasOnly(['kind', 'authorUid', 'authorName', 'text', 'photoPath', 'visibility', 'status', 'modVersion', 'createdAt'])
+        && request.resource.data.kind == 'post'
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.authorName == webAcct().displayName
+        && str(request.resource.data.text, 1000)
+        && (request.resource.data.photoPath == ''
+            || request.resource.data.photoPath.matches('^web/wall/' + request.auth.uid + '/' + postId + '/[A-Za-z0-9._-]{1,60}$'))
+        && request.resource.data.visibility in ['members', 'public']
+        && request.resource.data.status == 'Visible' && request.resource.data.modVersion == 0
+        && request.resource.data.createdAt == request.time;
+      // Admin approves / hides; the author may hide (never un-hide) their own post.
+      allow update: if (isModerator() || (isWebMember() && resource.data.authorUid == request.auth.uid
+          && request.resource.data.status == 'Hidden')) && moderated('post_' + postId);
+      allow delete: if false;
+
+      match /likes/{uid} {
+        allow read: if isWebMember() || isModerator();
+        allow create: if isWebMember() && uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['at']) && request.resource.data.at == request.time
+          && get(docAt('webWall/' + postId)).data.status == 'Visible';
+        allow delete: if isWebMember() && uid == request.auth.uid;   // un-like
+        allow update: if false;
+      }
+    }
+
+    match /webComments/{id} {
+      // postPublic is copied from the post at creation (a post's visibility never changes), so visitor queries can be checked.
+      allow read: if isModerator()
+        || (resource.data.status == 'Visible' && (isWebMember() || resource.data.postPublic == true));
+      allow create: if request.resource.data.keys().hasOnly(['postId', 'postPublic', 'authorUid', 'authorName', 'text', 'visitor', 'status', 'modVersion', 'createdAt'])
+        && str(request.resource.data.text, 500) && request.resource.data.modVersion == 0 && request.resource.data.createdAt == request.time
+        && get(docAt('webWall/' + request.resource.data.postId)).data.status == 'Visible'
+        && request.resource.data.postPublic == (get(docAt('webWall/' + request.resource.data.postId)).data.visibility == 'public')
+        && (
+          // Member: shows at once.
+          (isWebMember() && request.resource.data.visitor == false && request.resource.data.status == 'Visible'
+            && request.resource.data.authorUid == request.auth.uid && request.resource.data.authorName == webAcct().displayName)
+          // Visitor (not signed in): only on public posts, always Pending until an admin approves.
+          || (!signedIn() && request.resource.data.visitor == true && request.resource.data.status == 'Pending'
+            && request.resource.data.postPublic == true && request.resource.data.authorUid == ''
+            && str(request.resource.data.authorName, 60))
+        );
+      allow update: if isModerator() && moderated('cmt_' + id);
+      allow delete: if false;
+    }
+
+    match /webModLog/{id} {
+      allow read: if isModerator();
+      allow create: if request.resource.data.keys().hasOnly(['target', 'action', 'by', 'at', 'reason'])
+        && request.resource.data.by == request.auth.uid && request.resource.data.at == request.time
+        && request.resource.data.action in ['approve', 'hide', 'unhide']
+        && (!('reason' in request.resource.data) || request.resource.data.reason.size() <= 300)
+        && (
+          (request.resource.data.target.matches('^webWall/[A-Za-z0-9_-]+$')
+            && id == 'post_' + request.resource.data.target.split('/')[1] + '_' + string(getAfter(docAt(request.resource.data.target)).data.modVersion)
+            && (isModerator() || (isWebMember() && getAfter(docAt(request.resource.data.target)).data.authorUid == request.auth.uid)))
+          || (request.resource.data.target.matches('^webComments/[A-Za-z0-9_-]+$') && isModerator()
+            && id == 'cmt_' + request.resource.data.target.split('/')[1] + '_' + string(getAfter(docAt(request.resource.data.target)).data.modVersion))
+        );
+      allow update, delete: if false;
     }
     // ===================== WEBSITE (paste to here) =======================
   }

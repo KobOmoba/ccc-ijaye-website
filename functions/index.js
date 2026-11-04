@@ -19,3 +19,11 @@ exports.issueWebPassword = onCall({ region: "europe-west1", enforceAppCheck: fal
         throw new HttpsError("internal", "Could not issue the login.");
     }
 });
+
+// Daily birthday posts on the members' wall (06:05 Lagos time). WRITTEN, NOT DEPLOYED (needs Blaze, like above).
+const { onSchedule } = require("firebase-functions/v2/scheduler");
+const { postBirthdays } = require("./birthdays");
+exports.wallBirthdays = onSchedule({ schedule: "5 6 * * *", timeZone: "Africa/Lagos", region: "europe-west1" }, async () => {
+    const r = await postBirthdays({ db: getFirestore(), FieldValue });
+    console.log("birthday posts", r);
+});
