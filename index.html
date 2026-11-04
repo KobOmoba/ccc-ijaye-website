@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Celestial Church of Christ — Ijaye, Abeokuta</title>
+    <meta name="description" content="Celestial Church of Christ, Archdiocesan Headquarters, Ijaye, Abeokuta, Ogun State.">
+    <meta name="theme-color" content="#031d48">
+    <link rel="icon" href="assets/ccc-logo.png" type="image/png">
+    <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js" defer></script>
+    <link rel="stylesheet" href="styles.css">
+    <script src="config.js" defer></script>
+    <script src="app.js" defer></script>
+    <script src="site.js" defer></script>
+    <script src="wall.js" defer></script>
+    <script src="members.js" defer></script>
+    <script src="admin.js" defer></script>
+</head>
+<body class="font-sans pb-20">
+    <div class="rainbow-stripe"></div>
+    <header class="bg-white border-b sticky top-0 z-20">
+        <div class="max-w-3xl mx-auto px-4 py-2 flex items-center gap-3">
+            <img src="assets/ccc-logo.png" alt="Celestial Church of Christ logo" class="h-10 w-auto" onclick="show('home')">
+            <div class="leading-tight flex-1 min-w-0">
+                <p class="text-[11px] font-black tracking-wider text-navy uppercase truncate">Celestial Church of Christ</p>
+                <p class="text-[10px] font-semibold text-gold uppercase tracking-wide truncate">Archdiocesan HQ · Ijaye, Abeokuta</p>
+            </div>
+            <button id="headerSignIn" onclick="show('signin')" class="btn-navy text-xs font-bold px-3 py-2 rounded-lg"><i class="fa-solid fa-user-lock"></i><span class="sr-only">Member sign in</span></button>
+            <button id="headerSignOut" onclick="signOut()" class="hidden border border-gray-300 text-xs font-bold px-3 py-2 rounded-lg text-navy">Sign out</button>
+        </div>
+    </header>
+
+    <main class="max-w-3xl mx-auto">
+        <!-- ============ PUBLIC HOME ============ -->
+        <section id="view-home" class="view active">
+            <div class="hero-arch px-4 pt-8 pb-6 text-center">
+                <img src="assets/ccc-logo.png" alt="" class="h-36 w-auto mx-auto mb-3">
+                <p class="text-2xl font-black text-navy">Halleluyah 🙌</p>
+                <h1 class="mt-2 text-lg font-black uppercase tracking-wider text-navy">Celestial Church of Christ</h1>
+                <p class="text-sm font-bold text-gold uppercase tracking-wide">Archdiocesan Headquarters, Ijaye, Abeokuta</p>
+                <p class="text-xs text-gray-500 mt-1">Ogun State, Nigeria</p>
+                <div class="rainbow-stripe rounded w-24 mx-auto my-4"></div>
+                <p id="aboutText" class="text-sm text-gray-600 max-w-sm mx-auto">You are welcome to worship with us. Come in white, come in peace.</p>
+                <div class="mt-5 flex flex-col gap-2 max-w-xs mx-auto">
+                    <button onclick="show('watch')" class="btn-gold font-bold py-3 rounded-xl"><i class="fa-solid fa-circle-play mr-2"></i>Watch live</button>
+                    <button id="heroMemberBtn" onclick="show('signin')" class="btn-navy font-bold py-3 rounded-xl"><i class="fa-solid fa-user-lock mr-2"></i>Member sign in</button>
+                </div>
+            </div>
+
+            <div class="px-4 space-y-4 pb-8">
+                <section id="times" class="card p-4">
+                    <h2 class="font-black text-navy flex items-center gap-2"><span class="band-dot" style="background:var(--rb-1)"></span>Service times</h2>
+                    <ul id="serviceTimes" class="mt-3 divide-y divide-gray-200 text-sm">
+                        <li class="py-2 flex justify-between"><span>Sunday Service</span><span class="text-gray-400">time to be added</span></li>
+                        <li class="py-2 flex justify-between"><span>Wednesday Mercy Day</span><span class="text-gray-400">time to be added</span></li>
+                        <li class="py-2 flex justify-between"><span>Friday Power Day</span><span class="text-gray-400">time to be added</span></li>
+                    </ul>
+                    <p id="timesNote" class="text-[11px] text-gray-400 mt-2">Placeholder. The parish office will confirm the times.</p>
+                </section>
+
+                <section id="readings" class="card p-4">
+                    <h2 class="font-black text-navy flex items-center gap-2"><span class="band-dot" style="background:var(--rb-2)"></span>This week's Bible readings</h2>
+                    <div id="readingsList" class="mt-3 text-sm space-y-3"><p class="text-gray-400">Readings will show here.</p></div>
+                </section>
+
+                <section id="visit" class="card p-4">
+                    <h2 class="font-black text-navy flex items-center gap-2"><span class="band-dot" style="background:var(--rb-3)"></span>Visit us</h2>
+                    <p id="addressText" class="text-sm text-gray-700 mt-3"><i class="fa-solid fa-location-dot text-gold mr-2"></i>Ijaye, Abeokuta, Ogun State</p>
+                    <div class="grid grid-cols-2 gap-2 mt-3">
+                        <a id="callBtn" class="hidden border rounded-xl py-3 text-center text-sm font-bold text-navy"><i class="fa-solid fa-phone mr-1"></i>Call us</a>
+                        <a id="mapBtn" target="_blank" rel="noopener" class="hidden border rounded-xl py-3 text-center text-sm font-bold text-navy"><i class="fa-solid fa-map-location-dot mr-1"></i>Open map</a>
+                    </div>
+                    <p id="visitNote" class="text-[11px] text-gray-400 mt-2">Phone and map link will be added by the parish office.</p>
+                </section>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="show('watch')" class="card p-4 text-left"><i class="fa-solid fa-tower-broadcast text-xl" style="color:var(--rb-1)"></i><p class="font-black text-navy mt-2 text-sm">Live &amp; past services</p></button>
+                    <button onclick="show('media')" class="card p-4 text-left"><i class="fa-solid fa-photo-film text-xl" style="color:var(--rb-4)"></i><p class="font-black text-navy mt-2 text-sm">Our media</p></button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ WATCH: LIVE + PAST SERVICES ============ -->
+        <section id="view-watch" class="view px-4 py-5 space-y-4">
+            <div>
+                <h2 class="text-xl font-black text-navy">Live &amp; past services</h2>
+                <p class="text-xs text-gray-500">From our YouTube channel</p>
+            </div>
+            <section class="card p-3">
+                <p class="font-black text-navy text-sm mb-2"><span class="live-dot"></span> Live now</p>
+                <div id="livePlayer" class="aspect-video rounded-xl overflow-hidden bg-navy"></div>
+                <p class="text-[11px] text-gray-500 mt-2">When we are not live, YouTube shows our next or latest stream.</p>
+            </section>
+            <section class="card p-3">
+                <p class="font-black text-navy text-sm mb-2">Past services</p>
+                <div id="pastGrid" class="grid grid-cols-2 gap-2"></div>
+            </section>
+            <section id="playlistBox" class="card p-3 hidden">
+                <p class="font-black text-navy text-sm mb-2">All recordings</p>
+                <div id="playlistPlayer" class="aspect-video rounded-xl overflow-hidden bg-navy"></div>
+            </section>
+            <a id="ytChannelBtn" target="_blank" rel="noopener" class="block text-center btn-yt font-bold py-3 rounded-xl"><i class="fa-brands fa-youtube mr-2"></i>Open our YouTube channel</a>
+        </section>
+
+        <!-- ============ MEDIA HUB ============ -->
+        <section id="view-media" class="view px-4 py-5 space-y-4">
+            <div>
+                <h2 class="text-xl font-black text-navy">Our media</h2>
+                <p class="text-xs text-gray-500">Follow Ijaye HQ everywhere</p>
+            </div>
+            <div id="mediaHub" class="space-y-3"></div>
+        </section>
+
+        <!-- ============ MEMBERS' WALL ============ -->
+        <section id="view-wall" class="view px-4 py-5 space-y-4">
+            <div>
+                <h2 class="text-xl font-black text-navy">Members' wall</h2>
+                <p id="wallSub" class="text-xs text-gray-500">Well wishes, announcements and birthdays</p>
+            </div>
+            <div id="wallVisitorNote" class="card p-3 text-sm bg-amber-50 border-amber-200">
+                You are viewing as a visitor. You see posts members chose to share publicly. Comments from visitors show after the parish office approves them.
+                <button onclick="show('signin')" class="block mt-2 font-bold text-navy">Member? Sign in to see everything <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+            <div id="composer" class="card p-3 hidden">
+                <textarea id="postText" rows="3" maxlength="1000" placeholder="Share a well wish or announcement..." class="w-full border rounded-lg p-3 text-sm"></textarea>
+                <div id="photoPreviewBox" class="hidden mt-2 relative"><img id="photoPreview" alt="Photo to post" class="rounded-lg max-h-48"><button onclick="clearPhoto()" class="absolute top-1 right-1 bg-white rounded-full w-7 h-7 text-sm" aria-label="Remove photo"><i class="fa-solid fa-xmark"></i></button></div>
+                <div class="flex items-center gap-2 mt-2">
+                    <label class="border rounded-lg px-3 py-2 text-sm font-bold text-navy cursor-pointer"><i class="fa-solid fa-camera mr-1"></i>Photo<input id="photoInput" type="file" accept="image/*" class="hidden" onchange="pickPhoto(this)"></label>
+                    <label class="text-xs text-gray-600 flex items-center gap-1 flex-1"><input id="postPublic" type="checkbox"> Visitors can see this too</label>
+                    <button id="postBtn" onclick="createPost()" class="btn-gold font-bold px-4 py-2 rounded-lg text-sm">Post</button>
+                </div>
+                <p id="postError" class="hidden text-sm text-red-700 mt-2"></p>
+                <p class="text-[11px] text-gray-400 mt-2">No private messages here: everything on the wall is seen by members (and by visitors if you tick the box).</p>
+            </div>
+            <div id="wallFeed" class="space-y-3"></div>
+        </section>
+
+        <!-- ============ SIGN IN ============ -->
+        <section id="view-signin" class="view px-4 py-8">
+            <div class="card p-5 max-w-sm mx-auto">
+                <img src="assets/ccc-logo.png" alt="" class="h-20 w-auto mx-auto">
+                <h2 class="text-center font-black text-navy mt-2">Member sign in</h2>
+                <p class="text-center text-xs text-gray-500">For registered members of Ijaye parish</p>
+                <div class="rainbow-stripe rounded my-4"></div>
+                <label class="block text-xs font-bold text-gray-700" for="memberNo">Member number</label>
+                <input id="memberNo" autocomplete="username" autocapitalize="characters" placeholder="e.g. CCC-IJY-ABK-MBR-001" class="w-full border rounded-lg px-3 py-3 mt-1 uppercase">
+                <label class="block text-xs font-bold text-gray-700 mt-3" for="password">Password</label>
+                <input id="password" type="password" autocomplete="current-password" class="w-full border rounded-lg px-3 py-3 mt-1">
+                <p id="signinError" class="hidden text-sm text-red-700 mt-3"></p>
+                <button id="signinBtn" onclick="signIn()" class="btn-gold w-full font-bold py-3 rounded-xl mt-4">Sign in</button>
+                <p class="text-[11px] text-gray-500 mt-4 text-center">No password yet, or forgot it? Ask the parish office for a temporary password.</p>
+                <button onclick="show('home')" class="w-full text-sm text-navy font-semibold mt-3">Back to home</button>
+                <details class="mt-4 text-xs text-gray-600">
+                    <summary class="cursor-pointer font-bold">Parish office sign in</summary>
+                    <p class="mt-2">For the Ijaye parish admin: use your Parish Portal email and password.</p>
+                    <input id="adminEmail" type="email" autocomplete="email" placeholder="Portal email" class="w-full border rounded-lg px-3 py-3 mt-2">
+                    <input id="adminPw" type="password" autocomplete="current-password" placeholder="Portal password" class="w-full border rounded-lg px-3 py-3 mt-2">
+                    <button id="adminSigninBtn" onclick="adminSignIn()" class="btn-navy w-full font-bold py-3 rounded-xl mt-2">Sign in as parish office</button>
+                </details>
+            </div>
+        </section>
+
+        <!-- ============ FIRST LOGIN: CHANGE PASSWORD ============ -->
+        <section id="view-changepw" class="view px-4 py-8">
+            <div class="card p-5 max-w-sm mx-auto">
+                <p class="text-xl font-black text-navy text-center">Halleluyah 🙌</p>
+                <h2 class="text-center font-black text-navy mt-1">Choose your own password</h2>
+                <p class="text-center text-xs text-gray-500 mt-1">You signed in with a temporary password. Please set a new one to continue.</p>
+                <div class="rainbow-stripe rounded my-4"></div>
+                <label class="block text-xs font-bold text-gray-700" for="newPw">New password (at least 8 characters)</label>
+                <input id="newPw" type="password" autocomplete="new-password" class="w-full border rounded-lg px-3 py-3 mt-1">
+                <label class="block text-xs font-bold text-gray-700 mt-3" for="newPw2">Type it again</label>
+                <input id="newPw2" type="password" autocomplete="new-password" class="w-full border rounded-lg px-3 py-3 mt-1">
+                <p id="changeError" class="hidden text-sm text-red-700 mt-3"></p>
+                <button id="changeBtn" onclick="changePassword()" class="btn-gold w-full font-bold py-3 rounded-xl mt-4">Save new password</button>
+            </div>
+        </section>
+
+        <!-- ============ MEMBERS AREA: MY DUTIES + ROSTER ============ -->
+        <section id="view-members" class="view px-4 py-5 space-y-4">
+            <div class="card p-4">
+                <p id="memberGreeting" class="text-xl font-black text-navy">Halleluyah 🙌</p>
+                <p id="memberNoLine" class="text-xs text-gray-500 mt-1"></p>
+            </div>
+            <section class="card p-4">
+                <h3 class="font-black text-navy flex items-center gap-2"><span class="band-dot" style="background:var(--rb-1)"></span>My duties</h3>
+                <div id="myDuties" class="mt-3 space-y-2 text-sm"><p class="text-gray-400">Loading...</p></div>
+            </section>
+            <section class="card p-4">
+                <h3 class="font-black text-navy flex items-center gap-2"><span class="band-dot" style="background:var(--rb-4)"></span><span id="rosterTitle">Service roster</span></h3>
+                <div id="rosterView" class="mt-3 space-y-2 text-sm"><p class="text-gray-400">Loading...</p></div>
+            </section>
+            <button onclick="show('wall')" class="w-full btn-navy font-bold py-3 rounded-xl"><i class="fa-solid fa-people-group mr-2"></i>Go to the members' wall</button>
+        </section>
+
+        <!-- ============ PARISH OFFICE: SETTINGS + MODERATION ============ -->
+        <section id="view-admin" class="view px-4 py-5 space-y-4">
+            <div>
+                <h2 class="text-xl font-black text-navy">Parish office</h2>
+                <p class="text-xs text-gray-500">Website settings and wall moderation</p>
+            </div>
+            <div class="flex gap-2">
+                <button id="tabMod" onclick="adminTab('mod')" class="tab-btn active flex-1">Moderation <span id="pendingCount" class="pill hidden"></span></button>
+                <button id="tabSettings" onclick="adminTab('settings')" class="tab-btn flex-1">Settings</button>
+            </div>
+            <div id="adminMod" class="space-y-4">
+                <section class="card p-4">
+                    <h3 class="font-black text-navy">Visitor comments waiting</h3>
+                    <div id="pendingList" class="mt-3 space-y-3 text-sm"></div>
+                </section>
+                <section class="card p-4">
+                    <h3 class="font-black text-navy">Recent posts</h3>
+                    <p class="text-[11px] text-gray-500">Hiding keeps the post in the records; nothing is deleted. Every action is logged.</p>
+                    <div id="modPosts" class="mt-3 space-y-3 text-sm"></div>
+                </section>
+            </div>
+            <div id="adminSettings" class="hidden">
+                <section class="card p-4 space-y-3 text-sm">
+                    <h3 class="font-black text-navy">YouTube</h3>
+                    <label class="block"><span class="font-bold text-xs">Channel ID (starts with UC)</span><input id="s_ytChannel" class="w-full border rounded-lg px-3 py-2 mt-1" placeholder="UCxxxxxxxxxxxxxxxxxxxxxx"></label>
+                    <label class="block"><span class="font-bold text-xs">Channel link</span><input id="s_ytUrl" class="w-full border rounded-lg px-3 py-2 mt-1" placeholder="https://www.youtube.com/@..."></label>
+                    <label class="block"><span class="font-bold text-xs">"All recordings" playlist (ID or link)</span><input id="s_playlist" class="w-full border rounded-lg px-3 py-2 mt-1" placeholder="PL... or https://www.youtube.com/playlist?list=PL..."></label>
+                    <label class="block"><span class="font-bold text-xs">Past services (up to 12, one per line: video link | title)</span>
+                        <textarea id="s_past" rows="5" class="w-full border rounded-lg px-3 py-2 mt-1" placeholder="https://youtu.be/xxxxxxxxxxx | Sunday Service 2 Nov"></textarea></label>
+                    <h3 class="font-black text-navy pt-2">Other pages</h3>
+                    <label class="block"><span class="font-bold text-xs">Facebook page link</span><input id="s_fb" class="w-full border rounded-lg px-3 py-2 mt-1" placeholder="https://www.facebook.com/..."></label>
+                    <label class="block"><span class="font-bold text-xs">TikTok link</span><input id="s_tt" class="w-full border rounded-lg px-3 py-2 mt-1" placeholder="https://www.tiktok.com/@..."></label>
+                    <label class="block"><span class="font-bold text-xs">Instagram link</span><input id="s_ig" class="w-full border rounded-lg px-3 py-2 mt-1" placeholder="https://www.instagram.com/..."></label>
+                    <p id="settingsMsg" class="hidden text-sm"></p>
+                    <button id="settingsBtn" onclick="saveSettings()" class="btn-gold w-full font-bold py-3 rounded-xl">Save settings</button>
+                    <p class="text-[11px] text-gray-500">Service times, address, phone and map come from the Parish Portal (Settings &gt; Public church info).</p>
+                </section>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-navy text-white text-center px-4 py-6 mt-4">
+        <p class="text-xs font-black tracking-wider uppercase">Celestial Church of Christ</p>
+        <p class="text-[11px] text-[color:var(--gold-light)] uppercase">Archdiocesan Headquarters, Ijaye, Abeokuta</p>
+        <div class="rainbow-stripe rounded w-20 mx-auto mt-3"></div>
+    </footer>
+
+    <nav class="bottom-nav" aria-label="Main">
+        <button data-nav="home" onclick="show('home')"><i class="fa-solid fa-house"></i><span>Home</span></button>
+        <button data-nav="watch" onclick="show('watch')"><i class="fa-solid fa-circle-play"></i><span>Watch</span></button>
+        <button data-nav="media" onclick="show('media')"><i class="fa-solid fa-share-nodes"></i><span>Media</span></button>
+        <button data-nav="wall" onclick="show('wall')"><i class="fa-solid fa-people-group"></i><span>Wall</span></button>
+        <button id="navMe" data-nav="me" onclick="showMe()"><i class="fa-solid fa-user"></i><span>Me</span></button>
+    </nav>
+</body>
+</html>

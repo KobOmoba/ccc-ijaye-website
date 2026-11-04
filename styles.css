@@ -1,0 +1,49 @@
+/* Palette sampled from the official logo (same tokens as the Parish Portal). */
+:root {
+    --rb-1: #aa1f1b; --rb-2: #b6940b; --rb-3: #0a4923; --rb-4: #045c6b; --rb-5: #773246;
+    --navy: #031d48; --navy-2: #0b2c63; --gold: #b6940b; --gold-light: #e9c94a; --page: #ffffff;
+    --rainbow: linear-gradient(90deg, var(--rb-1) 0 20%, var(--rb-2) 20% 40%, var(--rb-3) 40% 60%, var(--rb-4) 60% 80%, var(--rb-5) 80%);
+}
+html { scroll-behavior: smooth; }
+body { background: var(--page); color: #1f2937; -webkit-tap-highlight-color: transparent; }
+.rainbow-stripe { height: 4px; background: var(--rainbow); }
+.text-navy { color: var(--navy); }
+.text-gold { color: var(--gold); }
+.bg-navy { background: var(--navy); }
+.btn-gold { background: var(--gold); color: #fff; }
+.btn-gold:active { filter: brightness(.9); }
+.btn-navy { background: var(--navy); color: #fff; }
+.card { background: #fff; border: 1px solid #e5e7eb; border-radius: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+.hero-arch { background: radial-gradient(120% 80% at 50% 0%, #fdf8e6 0%, #ffffff 60%); }
+.band-dot { width: .6rem; height: .6rem; border-radius: 999px; display: inline-block; }
+.soon { font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--rb-4); font-weight: 700; }
+.view { display: none; }
+.view.active { display: block; }
+input:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
+/* Step 2 */
+.bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 30; background: #fff; border-top: 1px solid #e5e7eb;
+    display: grid; grid-template-columns: repeat(5, 1fr); padding-bottom: env(safe-area-inset-bottom); }
+.bottom-nav button { padding: .5rem 0 .45rem; font-size: .65rem; font-weight: 700; color: #6b7280; display: flex; flex-direction: column; align-items: center; gap: .15rem; }
+.bottom-nav button i { font-size: 1.1rem; }
+.bottom-nav button.on { color: var(--navy); }
+.bottom-nav button.on i { color: var(--gold); }
+.btn-yt { background: #c4302b; color: #fff; }
+.live-dot { width: .55rem; height: .55rem; border-radius: 999px; background: #dc2626; display: inline-block; margin-right: .25rem; animation: pulse 1.6s infinite; }
+@keyframes pulse { 50% { opacity: .35; } }
+.placeholder-box { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; text-align: center; padding: 1rem; }
+.thumb { position: relative; border-radius: .75rem; overflow: hidden; background: var(--navy); aspect-ratio: 16/9; }
+.thumb img { width: 100%; height: 100%; object-fit: cover; }
+.thumb .play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.6rem; text-shadow: 0 1px 6px rgba(0,0,0,.5); }
+.media-card { display: flex; align-items: center; gap: .75rem; padding: 1rem; border-radius: 1rem; color: #fff; font-weight: 800; }
+.media-card.off { background: #f3f4f6 !important; color: #6b7280; }
+.media-card i.big { font-size: 1.8rem; width: 2rem; text-align: center; }
+.post-bday { background: linear-gradient(135deg, #fdf8e6, #fff); border-color: var(--gold-light); }
+.tab-btn { border: 1px solid #d1d5db; border-radius: .75rem; padding: .6rem; font-weight: 800; font-size: .85rem; color: var(--navy); background: #fff; }
+.tab-btn.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+.pill { background: #dc2626; color: #fff; border-radius: 999px; padding: 0 .4rem; font-size: .7rem; }
+.badge { font-size: .65rem; font-weight: 800; padding: .1rem .45rem; border-radius: 999px; }
+.badge-hidden { background: #fee2e2; color: #991b1b; }
+.badge-public { background: #dcfce7; color: #166534; }
+.badge-members { background: #e0e7ff; color: #3730a3; }
+.duty-row { border-left: 4px solid var(--gold); background: #fffbeb; border-radius: .5rem; padding: .5rem .75rem; }
+textarea:focus { outline: 2px solid var(--gold); outline-offset: 1px; }

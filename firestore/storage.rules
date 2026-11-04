@@ -1,0 +1,27 @@
+rules_version = '2';
+// DRAFT - NOT DEPLOYED. Cloud Storage rules for the Ijaye website (bucket of project ccc-data-aarinat).
+// Wall photos only: web/wall/{uid}/{postId}/{file}. The website shrinks photos to JPEG (max 1280px) before upload.
+// Limits: images only (jpeg/png/webp), under 2 MB, uploaded by an active website member into their own folder.
+// Never overwritten or deleted from the browser (hiding a post hides its photo on the site).
+// Merge into the Portal's storage.rules if it has one (keep its existing matches).
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isWebMember() {
+      return request.auth != null
+        && firestore.get(/databases/(default)/documents/webAccounts/$(request.auth.uid)).data.status == 'Active'
+        && firestore.get(/databases/(default)/documents/webAccounts/$(request.auth.uid)).data.mustChangePassword == false;
+    }
+    match /web/wall/{uid}/{postId}/{file} {
+      allow create: if resource == null && request.auth != null && request.auth.uid == uid && isWebMember()
+        && request.resource.size < 2 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp)')
+        && file.matches('[A-Za-z0-9._-]{1,60}');
+      // Members (and admins) see all wall photos; visitors only photos of public, visible posts.
+      allow read: if isWebMember()
+        || (request.auth != null && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in ['parish_admin', 'super_admin'])
+        || (firestore.get(/databases/(default)/documents/webWall/$(postId)).data.visibility == 'public'
+            && firestore.get(/databases/(default)/documents/webWall/$(postId)).data.status == 'Visible');
+      allow update, delete: if false;
+    }
+  }
+}

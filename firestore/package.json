@@ -1,0 +1,15 @@
+{
+  "name": "ccc-ijaye-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "NODE_OPTIONS=--require=./noproxy-local.cjs firebase emulators:exec --only firestore,storage --project demo-ccc \"node --test --test-concurrency=1 rules.test.mjs storage.test.mjs\"",
+    "test:e2e": "NODE_OPTIONS=--require=./noproxy-local.cjs firebase emulators:exec --only firestore,auth,storage --project demo-ccc \"node e2e.mjs\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "6.0.0",
+    "firebase": "13.1.0",
+    "firebase-tools": "15.34.2",
+    "playwright": "^1.64.1"
+  }
+}
