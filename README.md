@@ -26,6 +26,43 @@ Plain HTML/JS + Tailwind + Firebase (same project as the Parish Portal: `ccc-dat
 - Draft rules: `firestore/website.rules`, `firestore/storage.rules` (photos: jpeg/png/webp, < 2 MB, own folder, no
   overwrite/delete), `firestore/website.indexes.json`. Cloud Function `wallBirthdays` (daily 06:05 Lagos) in `functions/`.
 
+## Step 3 (FREE plan demo)
+- **Stories** replace the wall (like WhatsApp Status / Facebook Stories): round avatars with a rainbow ring (new) or grey
+  ring (seen; remembered on the phone), full-screen viewer with progress bars, auto-advance (5 s), tap left/right = back/next,
+  hold = pause. Text-on-colour stories and photo stories with caption. Emoji reactions, comments (visitor comments wait for
+  approval), authors see **who viewed** their story. NO private messages. Stories show 24 h, then stop showing; they stay
+  in the database (never deleted). Parish office can hide / show any story (logged).
+- **Birthdays**: Parish office > Birthdays keeps a list of **name + day + month only**. On the day, the first signed-in
+  member to open the site makes the "Halleluyah 🙌, happy birthday {name}" story. Fixed id per person per date, fixed
+  text, date checked against the server clock (Lagos): it cannot be forged or doubled.
+- **Media defaults** (editable in Settings): YouTube @cccijayearchdiocese, TikTok @celeijayeabkta_ng, Facebook
+  "CCC Ijaye Archdiocese" (facebook.com/cccijayearchdiocese). Instagram: none yet. The live embed needs the channel ID
+  (UC...), which still has to be typed in Settings.
+
+### Runs on the Firebase FREE (Spark) plan
+- No Cloud Functions, no Cloud Storage. Photos are shrunk on the phone to a JPEG of at most ~150 KB and stored in
+  Firestore (`webStories/{id}/photo/main`; rules refuse bigger or non-JPEG data).
+- **Temporary passwords**: Parish office > Logins (`issue-login.js`). A second Firebase app instance creates the member's
+  Auth user (the admin stays signed in); that new user proves its email matches the number (`webClaims`); the admin then
+  writes `webAccounts` (must change password) + `webAudit` in one batch. The password is shown once and stored nowhere.
+  **Portal hook:** the Portal can load `issue-login.js` and call `issueWebLogin({...})` the same way.
+- **Limitation:** without the Admin SDK a browser cannot change another person's password, and reset emails cannot be
+  sent (sign-in emails end in `.invalid`). So "reset" makes a **new login** for the same number (`...mbr-001.v2@...`),
+  switches the old one off (`Replaced`) and records it; the member still just types their number. Old Auth users stay in
+  Firebase Auth (harmless). Anyone can technically create an Auth user on Email/Password, but it gets no access without
+  a `webAccounts` record that only the Ijaye admin can make. Do NOT turn off "Allow sign-up" in Auth settings (the
+  office phone needs it).
+- **For after approval (Blaze):** `functions/` (issueWebPassword with real resets, wallBirthdays) and
+  `firestore/storage.rules` stay in the repo, unused by the demo. (`npm run test:blaze` for the storage rules.)
+
+### Make the demo live on the free plan (Bayo)
+1. Firebase console > Authentication > Sign-in method: turn on **Email/Password** (leave sign-up allowed).
+2. Paste the WEBSITE block from `firestore/website.rules` into the Portal's `firestore.rules` (plus the roster line), publish.
+3. Firestore > Indexes: add the 3 indexes in `firestore/website.indexes.json` (or deploy them with the rules).
+4. Create `webSite/config` = `{ parishId: "<Ijaye parish id>" }` (Super Admin).
+5. Paste the web app config into `config.js`; add the Vercel domain to Authentication > Settings > Authorised domains.
+6. Ijaye admin signs in on the website (Parish office), adds birthdays, issues logins, types the YouTube channel ID.
+
 ## Login design
 - Username = Portal member number (e.g. `CCC-IJY-ABK-MBR-001`), Ijaye parish only.
 - Behind the scenes each number maps to a Firebase Auth email that can never receive mail:
@@ -53,6 +90,7 @@ Plain HTML/JS + Tailwind + Firebase (same project as the Parish Portal: `ccc-dat
 ## Tests (emulator only, demo project)
 ```
 cd firestore && npm install
-npm test            # Firestore + Storage rules tests
-npm run test:e2e    # phone-size browser test + screenshots (needs the functions/ deps: cd functions && npm install)
+npm test            # Firestore rules tests (free plan)
+npm run test:e2e    # phone-size browser test + screenshots (Auth + Firestore emulators; needs functions/ deps for seeding)
+npm run test:blaze  # Storage rules (Blaze, after approval)
 ```

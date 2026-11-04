@@ -8,7 +8,13 @@ const SAFE_URL = {
     tiktokUrl: /^https:\/\/(www\.)?tiktok\.com\/[^\s"<>]*$/,
     instagramUrl: /^https:\/\/(www\.)?instagram\.com\/[^\s"<>]*$/,
 };
-const media = () => state.home.media || {};
+// Real church accounts (sent by Bayo, 4 Nov 2026). Defaults only: the Ijaye admin can change them in Settings.
+// YouTube channel ID (UC...) not yet known, so the live embed waits; the handle link works now.
+// Facebook page "CCC Ijaye Archdiocese" (confirmed URL). Instagram: none yet.
+const DEFAULT_MEDIA = { youtubeUrl: "https://www.youtube.com/@cccijayearchdiocese", tiktokUrl: "https://www.tiktok.com/@celeijayeabkta_ng",
+    facebookName: "CCC Ijaye Archdiocese", facebookUrl: "https://www.facebook.com/cccijayearchdiocese", youtubeChannelId: "", playlistId: "", instagramUrl: "", pastVideos: [] };
+const media = () => { const m = state.home.media || {}, out = { ...DEFAULT_MEDIA };
+    for (const k in m) if (m[k] !== "" && m[k] != null && !(Array.isArray(m[k]) && !m[k].length)) out[k] = m[k]; return out; };
 const safeUrl = (k) => (SAFE_URL[k].test(media()[k] || "") ? media()[k] : "");
 const ytChannelUrl = () => safeUrl("youtubeUrl") || (YT_CHANNEL.test(media().youtubeChannelId || "") ? "https://www.youtube.com/channel/" + media().youtubeChannelId : "");
 
@@ -82,7 +88,7 @@ function renderMedia() {
         : `<div class="media-card off"><i class="${icon} big"></i><span class="flex-1">${name}<span class="block text-xs font-semibold">Link coming soon</span></span></div>`;
     $("mediaHub").innerHTML = [
         card(ytChannelUrl(), "fa-brands fa-youtube", "YouTube", "#c4302b", "Live services and recordings"),
-        card(fb, "fa-brands fa-facebook", "Facebook", "#1b4fa0", "News and photos"),
+        card(fb, "fa-brands fa-facebook", "Facebook" + (media().facebookName ? " · " + esc(media().facebookName) : ""), "#1b4fa0", "News and photos"),
         fb ? `<div class="card p-2 overflow-hidden"><iframe title="Facebook page" class="w-full" style="height:420px;border:0" loading="lazy"
             src="https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(fb)}&tabs=timeline&width=340&height=420&small_header=true&adapt_container_width=true"></iframe></div>` : "",
         card(safeUrl("tiktokUrl"), "fa-brands fa-tiktok", "TikTok", "#111827", "Short clips"),

@@ -1,3 +1,4 @@
+// FOR AFTER APPROVAL (Blaze plan). The FREE-plan demo does not use this folder: see README "Step 3".
 // Cloud Function: issueWebPassword (callable). WRITTEN, NOT DEPLOYED.
 // Needs the Blaze (pay-as-you-go) plan on ccc-data-aarinat. Bayo deploys it; see README "What Bayo must enable".
 // The Parish Portal calls it from the member record: firebase.functions().httpsCallable("issueWebPassword")({ memberNo })

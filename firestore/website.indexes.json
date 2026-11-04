@@ -1,9 +1,8 @@
 {
   "indexes": [
-    { "collectionGroup": "webWall", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "status", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" } ] },
-    { "collectionGroup": "webWall", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "status", "order": "ASCENDING" }, { "fieldPath": "visibility", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" } ] }
+    { "collectionGroup": "webStories", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "status", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "ASCENDING" } ] },
+    { "collectionGroup": "webStories", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "status", "order": "ASCENDING" }, { "fieldPath": "visibility", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "ASCENDING" } ] },
+    { "collectionGroup": "webBirthdays", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "month", "order": "ASCENDING" }, { "fieldPath": "day", "order": "ASCENDING" } ] }
   ],
   "fieldOverrides": []
 }
