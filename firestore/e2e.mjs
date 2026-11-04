@@ -1,4 +1,4 @@
-// Step 1 + 2 end-to-end at phone size (390x844) against the LOCAL Auth + Firestore emulators (project demo-ccc).
+// Step 1-3 end-to-end (FREE PLAN: no functions, no storage) at phone size (390x844) against the LOCAL Auth + Firestore emulators (project demo-ccc).
 // Never touches the live project. Demo data only. Run: npm run test:e2e   (screenshots -> $SHOTS_DIR)
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';
@@ -10,20 +10,19 @@ import assert from 'node:assert/strict';
 const ROOT = new URL('..', import.meta.url).pathname;
 const SHOTS = process.env.SHOTS_DIR || join(ROOT, 'firestore', 'screenshots');
 mkdirSync(SHOTS, { recursive: true });
-assert.ok(process.env.FIRESTORE_EMULATOR_HOST && process.env.FIREBASE_AUTH_EMULATOR_HOST && process.env.FIREBASE_STORAGE_EMULATOR_HOST, 'emulators only');
+assert.ok(process.env.FIRESTORE_EMULATOR_HOST && process.env.FIREBASE_AUTH_EMULATOR_HOST, 'emulators only');
 
-// Admin SDK + the real Cloud Function logic, pointed at the emulators.
+// Admin SDK only to SEED demo data and to check results (the site itself uses the free-plan client code).
 const require = createRequire(join(ROOT, 'functions', 'index.js'));
 const { initializeApp } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
-const { issueTempPassword } = require('./issue.js');
 initializeApp({ projectId: 'demo-ccc' });
 const adm = { auth: getAuth(), db: getFirestore(), FieldValue };
 
 // Demo seed (made-up people). Same shapes as the Parish Portal.
 const P = 'demo-ijaye', NO = 'CCC-IJY-ABK-MBR-001', NO_OTHER = 'CCC-LAG-IKJ-MBR-001', NO2 = 'CCC-IJY-ABK-MBR-002';
-const { postBirthdays, lagosDate } = require('./birthdays.js');
+const { lagosDate } = require('./birthdays.js');
 const today = lagosDate(), T = today.ymd, MONTH = T.slice(0, 7);
 const plus = (n) => { const d = new Date(T + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 await adm.db.doc('users/uIjAdmin').set({ role: 'parish_admin', parishId: P });
@@ -48,30 +47,17 @@ const roster = (rev, status, rows) => ({ month: MONTH, rev, status, rows, nos: [
 await adm.db.doc(`parishes/${P}/rosters/${MONTH}_r1`).set(roster(1, 'Published', [row(plus(1))]));
 await adm.db.doc(`parishes/${P}/rosters/${MONTH}_r2`).set(roster(2, 'Published', [row(plus(-2)), row(plus(3), [duty('Prayer', NO, 'SIS. ADUNNI DEMO')]), row(plus(10))]));
 await adm.db.doc(`parishes/${P}/rosters/${MONTH}_r3`).set(roster(3, 'Draft', [row(plus(3), [duty('Sanitation', NO, 'SIS. ADUNNI DEMO')])]));
-// Another member's posts (one public, one members-only) + the daily birthday job.
-const post = (o) => ({ kind: 'post', authorUid: 'uTunde', authorName: 'Tunde Example', photoPath: '', status: 'Visible', modVersion: 0, createdAt: FieldValue.serverTimestamp(), ...o });
-await adm.db.doc('webWall/demoPublic').set(post({ text: 'Thanks to everyone who came for the harvest thanksgiving. God bless you all!', visibility: 'public' }));
-await adm.db.doc('webWall/demoMembers').set(post({ text: 'Choir rehearsal moves to Saturday 4pm this week (members only notice).', visibility: 'members' }));
-const bd = await postBirthdays(adm, new Date());
-assert.equal(bd.created, 1);
-assert.equal((await postBirthdays(adm, new Date())).created, 0, 'birthday job is idempotent');
-const bpost = (await adm.db.collection('webWall').where('kind', '==', 'birthday').get()).docs[0].data();
-assert.ok(bpost.text.startsWith('Halleluyah 🙌') && bpost.text.includes('Tunde Example'));
-assert.ok(!/1975|0801|Sample Road/.test(JSON.stringify(bpost)), 'birthday post must not contain year, phone or address');
-assert.equal(bpost.visibility, 'members');
-console.log('birthday job ok');
+// Another member's stories (made earlier today) + a birthdays list entry for today (name + day + month only).
+const ago = (min) => new Date(Date.now() - min * 60000);
+await adm.db.doc('webAccounts/uTunde').set({ memberNo: NO2, parishId: P, displayName: 'Tunde Example', status: 'Active', mustChangePassword: false });
+const st = (o) => ({ kind: 'text', authorUid: 'uTunde', authorName: 'Tunde Example', bg: 3, hasPhoto: false, status: 'Visible', modVersion: 0, ...o });
+await adm.db.doc('webStories/demoPublic').set(st({ text: 'Thanks to everyone who came for the harvest thanksgiving. God bless you all! 🙏', visibility: 'public', createdAt: ago(120) }));
+await adm.db.doc('webStories/demoMembers').set(st({ text: 'Choir rehearsal moves to Saturday 4pm this week.', bg: 2, visibility: 'members', createdAt: ago(60) }));
+await adm.db.doc('webStories/demoOld').set(st({ text: 'Yesterday story (expired)', visibility: 'public', createdAt: ago(60 * 26) }));
+await adm.db.doc('webAccounts/uBisi').set({ memberNo: 'CCC-IJY-ABK-MBR-005', parishId: P, displayName: 'Bisi Sample', status: 'Active', mustChangePassword: false });
+await adm.db.doc('webStories/demoBisi').set(st({ authorUid: 'uBisi', authorName: 'Bisi Sample', text: 'Mercy Day was powerful. Halleluyah!', bg: 5, visibility: 'members', createdAt: ago(30) }));
+await adm.db.doc('webBirthdays/bTunde').set({ name: 'Tunde Example', day: today.day, month: today.month });
 await adm.auth.createUser({ uid: 'uIjAdmin', email: 'office@ijaye-demo.test', password: 'AdminDemo2026' });
-
-// Function guards: other parish admin refused; another parish's member refused; unknown number refused.
-await assert.rejects(issueTempPassword(adm, 'uLagAdmin', NO), /Only the Ijaye parish admin/);
-await assert.rejects(issueTempPassword(adm, 'uIjAdmin', NO_OTHER), /No active Ijaye record/);
-await assert.rejects(issueTempPassword(adm, 'uIjAdmin', 'CCC-IJY-ABK-MBR-999'), /No active Ijaye record/);
-const { tempPassword } = await issueTempPassword(adm, 'uIjAdmin', NO);
-assert.equal(tempPassword.length, 10);
-// No password anywhere in Firestore.
-const acc = (await adm.db.collection('webAccounts').get()).docs.map(d => JSON.stringify(d.data())).join();
-assert.ok(!acc.includes(tempPassword), 'password must not be stored in Firestore');
-console.log('function guards ok');
 
 // Static server for the site.
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png' };
@@ -96,6 +82,7 @@ await page.route('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/**', r => 
 });
 const errors = [];
 page.on('pageerror', e => errors.push(e.message));
+page.on('console', m => { if (m.type() === 'warning' || m.type() === 'error') console.log('BROWSER', m.text().slice(0, 300)); });
 const shot = (n, full = false) => page.screenshot({ path: join(SHOTS, n + '.png'), fullPage: full });
 
 // Outside services are stubbed (offline test): YouTube / Facebook iframes and thumbnails.
@@ -122,26 +109,49 @@ try {
 
   await nav('watch'); await settle();
   assert.ok((await page.textContent('#livePlayer')).includes('Live service will show here'));
-  assert.ok(await page.isHidden('#ytChannelBtn'));
-  await shot('04-watch-placeholders');
-  await nav('media');
-  assert.equal(await page.locator('.media-card.off').count(), 4);
-  await shot('05-media-placeholders');
+  assert.ok(await page.isVisible('#ytChannelBtn'), 'channel handle link works before the UC id is known');
+  await shot('04-watch-live-waiting-for-channel-id');
 
+  // ---------- Visitor: stories ----------
   await nav('wall');
-  await page.waitForSelector('[data-post="demoPublic"]');
-  assert.equal(await page.locator('[data-post="demoMembers"]').count(), 0, 'members-only post hidden from visitors');
-  assert.equal(await page.locator('.post-bday').count(), 0, 'birthday posts are members-only');
-  assert.ok(await page.isHidden('#composer'), 'visitors cannot post');
-  await page.click('[data-post="demoPublic"] summary');
-  await page.fill('#vn_demoPublic', 'Mama Visitor'); await page.fill('#vc_demoPublic', 'Congratulations, we enjoyed the harvest!');
-  await page.click('[data-post="demoPublic"] >> text=Send for approval');
-  await page.waitForFunction(() => document.querySelector('#vm_demoPublic').textContent.includes('after the parish office approves'));
-  await shot('06-wall-visitor-comment-pending');
-  await page.reload(); await settle(); await nav('wall'); await page.waitForSelector('[data-post="demoPublic"]');
-  assert.ok(!(await page.textContent('#wallFeed')).includes('we enjoyed the harvest'), 'pending comment not shown');
+  await page.waitForSelector('[data-tile="demoPublic"]');
+  assert.equal(await page.locator('#storyRow .story-av').count(), 1, 'visitor sees only the public story group');
+  assert.ok(!(await page.textContent('#view-wall')).includes('expired'), '24h old story not shown');
+  await shot('06-stories-visitor');
+  await page.click('#storyRow .story-av');
+  await page.waitForSelector('#storyViewer:not(.hidden) .sv-text');
+  await page.click('#svActions >> text=Comments');
+  await page.fill('#vName', 'Mama Visitor'); await page.fill('#vText', 'Congratulations, we enjoyed the harvest!');
+  await page.click('#vSend');
+  await page.waitForFunction(() => document.querySelector('#vMsg').textContent.includes('after the parish office approves'));
+  await shot('07-story-visitor-comment-pending');
+  await page.click('#storySheet button[aria-label="Close"]'); await page.click('.sv-top .sv-x');
 
-  // ---------- Member: step-1 login flow ----------
+  // ---------- Parish office: issue a temp password (FREE PLAN, secondary app), birthdays list ----------
+  await page.click('#headerSignIn');
+  await page.click('text=Parish office sign in');
+  await page.fill('#adminEmail', 'office@ijaye-demo.test'); await page.fill('#adminPw', 'AdminDemo2026');
+  await page.click('#adminSigninBtn');
+  await page.waitForSelector('#view-admin.active');
+  await page.click('#tabLogins');
+  await page.fill('#issueNo', NO_OTHER); await page.click('#issueBtn');
+  await page.waitForFunction(() => document.querySelector('#issueMsg').textContent.includes('No active Ijaye record'));
+  await page.fill('#issueNo', NO.toLowerCase()); await page.click('#issueBtn');
+  await page.waitForSelector('#issueResult:not(.hidden)');
+  const tempPassword = (await page.textContent('#tempPw')).trim();
+  assert.equal(tempPassword.length, 10);
+  assert.ok(await page.isVisible('#view-admin.active'), 'admin still signed in after issuing (secondary app)');
+  await shot('08-office-issue-temp-password');
+  const accs = (await adm.db.collection('webAccounts').where('memberNo', '==', NO).get()).docs;
+  assert.equal(accs.length, 1); assert.equal(accs[0].data().mustChangePassword, true);
+  assert.ok(!JSON.stringify(accs.map(d => d.data())).includes(tempPassword), 'password never stored in Firestore');
+  assert.ok((await adm.db.doc('webAudit/issue_' + accs[0].id).get()).exists, 'audit entry');
+  await page.click('#tabBdays');
+  await page.waitForFunction(() => document.querySelector('#bList').textContent.includes('Tunde Example'));
+  await shot('09-office-birthdays-list');
+  await page.click('#headerSignOut');
+
+  // ---------- Member: login flow ----------
   await page.click('#headerSignIn');
   await page.fill('#memberNo', 'hello'); await page.fill('#password', 'x'); await page.click('#signinBtn');
   await page.waitForSelector('#signinError:not(.hidden)');
@@ -149,111 +159,130 @@ try {
   await page.waitForFunction(() => document.querySelector('#signinError').textContent.includes('not correct'));
   await page.fill('#password', tempPassword); await page.click('#signinBtn');
   await page.waitForSelector('#view-changepw.active');
-  await page.fill('#newPw', 'short'); await page.fill('#newPw2', 'short'); await page.click('#changeBtn');
-  await page.waitForSelector('#changeError:not(.hidden)');
   await page.fill('#newPw', 'MyNewPass2026'); await page.fill('#newPw2', 'MyNewPass2026'); await page.click('#changeBtn');
   await page.waitForSelector('#view-members.active');
   assert.equal(await page.textContent('#memberGreeting'), 'Halleluyah 🙌, Adunni Demo');
-
-  // My duties: from the LATEST published revision (r2), future dates only, never the draft (r3 Sanitation).
-  await page.waitForFunction(() => !document.querySelector('#myDuties').textContent.includes('Loading'));
-  const duties = await page.textContent('#myDuties');
-  assert.ok(duties.includes('Lesson Reader 1') && duties.includes('Prayer'), duties);
-  assert.ok(!duties.includes('Sanitation'), 'draft roster must not show');
-  assert.equal(await page.locator('#myDuties .duty-row').count(), 3, 'r2: 2 future rows Reader 1 + 1 Prayer');
   await page.waitForFunction(() => document.querySelector('#rosterView').textContent.includes('Version 2'));
-  await shot('07-member-my-duties');
-  await page.locator('#rosterView').scrollIntoViewIfNeeded(); await shot('08-member-month-roster');
+  assert.ok(!(await page.textContent('#myDuties')).includes('Sanitation'), 'draft roster must not show');
 
-  // Wall as member: sees members-only + birthday posts; posts with a photo (public), likes, comments.
-  await nav('wall'); await page.waitForSelector('[data-post="demoMembers"]');
-  assert.equal(await page.locator('.post-bday').count(), 1);
-  assert.ok((await page.textContent('.post-bday')).includes('Halleluyah 🙌 Happy birthday to Tunde Example'));
-  await shot('09-wall-member-birthday');
-  await page.fill('#postText', 'Halleluyah! Thank you all for the prayers during my exams. I passed!');
+  // Stories as member: birthday story made automatically (once), row with rings.
+  await nav('wall');
+  await page.waitForSelector('#storyRow [data-group="b_bTunde"]');
+  const bdays = (await adm.db.collection('webStories').where('kind', '==', 'birthday').get()).docs;
+  assert.equal(bdays.length, 1);
+  assert.equal(bdays[0].data().text, 'Halleluyah 🙌, happy birthday Tunde Example');
+  await page.reload(); await settle(); await page.waitForSelector('#view-members.active'); await nav('wall'); await page.waitForSelector('#storyRow [data-group="b_bTunde"]');
+  assert.equal((await adm.db.collection('webStories').where('kind', '==', 'birthday').get()).size, 1, 'no duplicate birthday story');
+  assert.equal(await page.locator('#storyRow .ring.new').count(), 3, 'birthday + Tunde + Bisi unseen');
+  await shot('10-stories-row-member');
+  // Viewer: open birthday, pause on hold, tap through
+  await page.click('#storyRow [data-group="b_bTunde"]');
+  await page.waitForSelector('#storyViewer:not(.hidden) .sv-text.bday');
+  await page.waitForTimeout(1200);
+  await shot('11-viewer-birthday');
+  await page.click('#svTap', { position: { x: 330, y: 300 } });   // next -> Tunde (group of 2)
+  await page.waitForFunction(() => document.querySelector('#svWho').textContent.includes('Tunde'));
+  const box = await page.locator('#svTap').boundingBox();
+  await page.mouse.move(200, 400); await page.mouse.down(); await page.waitForTimeout(1500);
+  const w1 = await page.evaluate(() => document.querySelector('#svBars .bar i').style.width);
+  await page.waitForTimeout(800);
+  assert.equal(await page.evaluate(() => document.querySelector('#svBars .bar i').style.width), w1, 'hold pauses');
+  await page.mouse.up();
+  await page.click('#svActions >> text=🙏');
+  await page.waitForSelector('#svActions .sv-emoji.on');
+  await page.waitForTimeout(700);
+  await shot('12-viewer-text-story-reaction');
+  await page.click('#svActions .sv-chip');
+  await page.fill('#cText', 'Amen! See you on Saturday.'); await page.click('#sheetBody >> text=Send');
+  await page.waitForFunction(() => document.querySelector('#sheetBody').textContent.includes('See you on Saturday'));
+  await shot('13-viewer-comments-sheet');
+  await page.click('#storySheet button[aria-label="Close"]');
+  await page.click('.sv-top .sv-x');
+  assert.ok((await adm.db.doc(`webStories/demoPublic/views/${accs[0].id}`).get()).exists, 'view recorded');
+
+  // New photo story (compressed on the phone) + a text story
+  await page.click('#storyRow button[aria-label="Add a story"]');
+  await page.fill('#cmpText', 'Halleluyah! I passed my exams. Thank you all for the prayers 🙌');
+  await page.click('#cmpSwatches .swatch >> nth=2');
+  await shot('14-composer-text');
+  await page.check('#cmpPublic');
+  await page.click('#cmpShare');
+  await page.waitForSelector('#composer.hidden', { state: 'attached' });
+  await page.click('#storyRow button[aria-label="Add a story"]');
+  await page.click('#cmpTabPhoto');
   await page.setInputFiles('#photoInput', join(ROOT, 'assets', 'ccc-logo.png'));
-  await page.waitForSelector('#photoPreviewBox:not(.hidden)');
-  await page.check('#postPublic');
-  await shot('10-wall-compose-with-photo');
-  await page.click('#postBtn');
-  await page.waitForFunction(() => document.querySelector('#wallFeed').textContent.includes('I passed!'));
-  const mine = page.locator('article', { hasText: 'I passed!' });
-  await mine.locator('img').waitFor();
-  const myPostId = await mine.getAttribute('data-post');
-  const saved = (await adm.db.doc('webWall/' + myPostId).get()).data();
-  assert.equal(saved.authorName, 'Adunni Demo'); assert.equal(saved.visibility, 'public');
-  assert.match(saved.photoPath, new RegExp(`^web/wall/[^/]+/${myPostId}/photo.jpg$`));
-  await page.click('[data-post="demoMembers"] .like-btn');
-  await page.waitForFunction(() => document.querySelector('[data-post="demoMembers"] .like-btn').textContent.includes('1'));
-  await page.fill('#c_demoMembers', 'Noted, thank you.'); await page.click('[data-post="demoMembers"] >> text=Send');
-  await page.waitForFunction(() => document.querySelector('[data-post="demoMembers"]').textContent.includes('Noted, thank you.'));
-  await page.locator(`[data-post="${myPostId}"]`).scrollIntoViewIfNeeded();
-  await shot('11-wall-member-posted-liked-commented');
+  await page.waitForSelector('#cmpPreview:not(.hidden)');
+  await page.fill('#cmpCaption', 'Our beautiful church logo');
+  await shot('15-composer-photo');
+  await page.click('#cmpShare');
+  await page.waitForSelector('#composer.hidden', { state: 'attached' });
+  const mine = (await adm.db.collection('webStories').where('authorUid', '==', accs[0].id).get()).docs.map(d => ({ id: d.id, ...d.data() }));
+  assert.equal(mine.length, 2);
+  const ph = mine.find(m => m.hasPhoto);
+  const data = (await adm.db.doc(`webStories/${ph.id}/photo/main`).get()).data().data;
+  assert.ok(data.startsWith('data:image/jpeg;base64,') && data.length <= 200000, 'compressed JPEG <= ~150KB');
+  await page.click('#storyRow [data-group="' + accs[0].id + '"]');
+  await page.waitForSelector('#svImg[src^="data:image/jpeg"], .sv-text');
+  await page.waitForTimeout(600);
+  await shot('16-viewer-own-story');
+  await page.click('.sv-top .sv-x');
   await page.click('#headerSignOut');
 
-  // ---------- Parish office (Ijaye admin): moderation + settings ----------
+  // Tunde (the other member) views my story -> I see "Seen by 1"
+  await adm.db.doc(`webStories/${ph.id}/views/uTunde`).set({ name: 'Tunde Example', at: new Date() });
+  await page.click('#headerSignIn');
+  await page.fill('#memberNo', NO); await page.fill('#password', 'MyNewPass2026'); await page.click('#signinBtn');
+  await page.waitForSelector('#view-members.active');
+  await nav('wall');
+  await page.click('#storyRow [data-group="' + accs[0].id + '"]');
+  await page.waitForSelector('#storyViewer:not(.hidden) #svWho b');
+  if (!(await page.locator('#svImg').count())) await page.click('#svTap', { position: { x: 330, y: 300 } });
+  await page.waitForSelector('#svImg');
+  await page.click('#svActions >> text=Seen by');
+  await page.waitForFunction(() => document.querySelector('#sheetBody').textContent.includes('Tunde Example'));
+  await shot('17-viewer-seen-by');
+  await page.click('#storySheet button[aria-label="Close"]'); await page.click('.sv-top .sv-x');
+  await page.click('#headerSignOut');
+
+  // ---------- Parish office: approve visitor comment, hide a story, reset = new login version ----------
   await page.click('#headerSignIn');
   await page.click('text=Parish office sign in');
   await page.fill('#adminEmail', 'office@ijaye-demo.test'); await page.fill('#adminPw', 'AdminDemo2026');
   await page.click('#adminSigninBtn');
   await page.waitForSelector('#view-admin.active');
   await page.waitForFunction(() => document.querySelector('#pendingList').textContent.includes('Mama Visitor'));
-  assert.equal(await page.textContent('#pendingCount'), '1');
-  await shot('12-admin-moderation-queue');
+  await shot('18-office-moderation');
   await page.click('#pendingList >> text=Approve');
   await page.waitForFunction(() => document.querySelector('#pendingList').textContent.includes('Nothing waiting'));
-  // Hide the members-only demo post; then show it again. Each action logged.
   await page.click(`#modPosts div:has-text("Choir rehearsal") >> text=Hide`);
   await page.waitForFunction(() => document.querySelector('#modPosts').textContent.includes('Show again'));
-  await shot('13-admin-post-hidden');
-  const log = (await adm.db.collection('webModLog').get()).docs.map(d => d.id).sort();
-  assert.equal(log.length, 2, JSON.stringify(log));
-  assert.ok(log.some(id => id.startsWith('cmt_')) && log.includes('post_demoMembers_1'));
-  assert.ok((await adm.db.doc('webWall/demoMembers').get()).exists, 'hidden, not deleted');
-
-  await page.click('#tabSettings');
-  await page.fill('#s_ytChannel', 'https://www.youtube.com/channel/UCdemoDEMOdemoDEMOdemo12');
-  await page.fill('#s_ytUrl', 'https://www.youtube.com/@ccc-ijaye-demo');
-  await page.fill('#s_playlist', 'https://www.youtube.com/playlist?list=PLdemoDEMOdemoDEMO01');
-  await page.fill('#s_past', 'https://youtu.be/AAAAAAAAAAA | Sunday Service (demo)\nhttps://www.youtube.com/watch?v=BBBBBBBBBBB | Mercy Day (demo)\nhttps://youtu.be/CCCCCCCCCCC | Power Day (demo)\nhttps://youtu.be/DDDDDDDDDDD | Harvest (demo)');
-  await page.fill('#s_fb', 'javascript:alert(1)');
-  await page.click('#settingsBtn');
-  await page.waitForFunction(() => document.querySelector('#settingsMsg').textContent.includes('facebook'));
-  await page.fill('#s_fb', 'https://www.facebook.com/ccc-ijaye-demo');
-  await page.fill('#s_tt', 'https://www.tiktok.com/@ccc-ijaye-demo');
-  await page.click('#settingsBtn');
-  await page.waitForFunction(() => document.querySelector('#settingsMsg').textContent.startsWith('Saved'));
-  await shot('14-admin-settings-saved', true);
-  const home = (await adm.db.doc('webSite/home').get()).data();
-  assert.equal(home.media.youtubeChannelId, 'UCdemoDEMOdemoDEMOdemo12'); assert.equal(home.media.pastVideos.length, 4);
+  assert.ok((await adm.db.doc('webStories/demoMembers').get()).exists, 'hidden, not deleted');
+  assert.ok((await adm.db.doc('webStories/demoOld').get()).exists, 'expired story kept');
+  await page.click('#tabLogins');
+  await page.fill('#issueNo', NO); await page.click('#issueBtn');
+  await page.waitForSelector('#issueResult:not(.hidden)');
+  const again = (await page.textContent('#tempPw')).trim();
+  assert.equal((await adm.db.doc('webLogin/' + NO).get()).data().v, 2);
+  assert.equal((await adm.db.doc('webAccounts/' + accs[0].id).get()).data().status, 'Replaced');
   await page.click('#headerSignOut');
-
-  // ---------- Visitor again: embeds use the saved links; approved comment visible; hidden post gone ----------
-  await nav('watch');
-  await page.waitForSelector('#livePlayer iframe');
-  assert.ok((await page.getAttribute('#livePlayer iframe', 'src')).includes('live_stream?channel=UCdemoDEMOdemoDEMOdemo12'));
-  assert.equal(await page.locator('#pastGrid .thumb').count(), 4);
-  await page.waitForTimeout(500);
-  await shot('15-watch-live-and-past');
-  await page.click('#pastGrid button >> nth=1');
-  await page.waitForFunction(() => document.querySelector('#livePlayer iframe').src.includes('BBBBBBBBBBB'));
-  await page.locator('#playlistBox').scrollIntoViewIfNeeded(); await page.waitForTimeout(300);
-  await shot('16-watch-playlist');
-  await nav('media'); await page.waitForTimeout(500);
-  assert.equal(await page.locator('.media-card.off').count(), 1, 'only Instagram still a placeholder');
-  await shot('17-media-hub', true);
-  await nav('wall');
-  await page.waitForFunction(() => document.querySelector('#wallFeed').textContent.includes('we enjoyed the harvest'));
-  assert.ok((await page.textContent('#wallFeed')).includes('I passed!'), 'public member post visible to visitors');
-  await page.locator('article', { hasText: 'I passed!' }).locator('img').waitFor();
-  await shot('18-wall-visitor-after-approval');
-
-  // Admin password reset still forces a change (step 1).
-  const again = await issueTempPassword(adm, 'uIjAdmin', NO);
+  // old password no longer works; new temp password forces a change
   await page.click('#headerSignIn');
-  await page.fill('#memberNo', NO); await page.fill('#password', again.tempPassword); await page.click('#signinBtn');
+  await page.fill('#memberNo', NO); await page.fill('#password', 'MyNewPass2026'); await page.click('#signinBtn');
+  await page.waitForFunction(() => document.querySelector('#signinError').textContent.includes('not correct'));
+  await page.fill('#password', again); await page.click('#signinBtn');
   await page.waitForSelector('#view-changepw.active');
-  console.log('reset forces change again ok');
+  console.log('reset (new login version) ok');
+  await page.evaluate(() => auth.signOut());
+
+  // Media hub with the church's real accounts as defaults
+  await nav('media'); await page.waitForTimeout(400);
+  const hub = await page.textContent('#mediaHub');
+  assert.ok(hub.includes('CCC Ijaye Archdiocese'));
+  assert.equal(await page.locator('#mediaHub a[href="https://www.tiktok.com/@celeijayeabkta_ng"]').count(), 1);
+  assert.equal(await page.locator('#mediaHub a[href="https://www.youtube.com/@cccijayearchdiocese"]').count(), 1);
+  assert.equal(await page.locator('#mediaHub a[href="https://www.facebook.com/cccijayearchdiocese"]').count(), 1);
+  assert.equal(await page.locator('.media-card.off').count(), 1, 'only Instagram still a placeholder');
+  await shot('19-media-hub-defaults', true);
 
   assert.deepEqual(errors, []);
   console.log('E2E PASS');

@@ -8,12 +8,18 @@ rules_version = '2';
 // Collections:
 //   webSite/config         { parishId }            which Portal parish is Ijaye. Public (an id, not private). Super Admin writes.
 //   webSite/home           { serviceTimes, media } public page content + media links. Ijaye parish admin edits (Settings page).
-//   webAccounts/{uid}      { memberNo, parishId, displayName, status, mustChangePassword, ... }
-//                          created ONLY by the Cloud Function (Admin SDK). No passwords, ever.
-//   webAudit/{id}          who issued / reset which login. Written ONLY by the Cloud Function.
-//   webWall/{postId}       members' wall posts (+ birthday posts written by the Cloud Function). Never deleted: hidden.
-//   webWall/{postId}/likes/{uid}  one like per member.
-//   webComments/{id}       comments. Members' show at once; visitors' wait as 'Pending' until an admin approves.
+//   webAccounts/{uid}      { memberNo, parishId, displayName, status, mustChangePassword, v, ... }  No passwords, ever.
+//                          FREE PLAN: created by the Ijaye parish admin in the browser (Parish office > Logins), only for
+//                          an Auth user that has proved, via webClaims, that it owns that member number's sign-in email.
+//   webClaims/{uid}        { memberNo, v } written by the NEW Auth user itself (secondary app); binds uid <-> member number.
+//   webLogin/{memberNo}    { v, uid } which login version is current (v1 = base email, v2+ = '.v2' email). get() only.
+//   webAudit/{id}          who issued / replaced which login. Append-only.
+//   webBirthdays/{id}      { name, day, month } ONLY (no year, phone, address). Kept by the Ijaye admin / Portal.
+//   webStories/{id}        stories (text-on-colour, photo, birthday). Shown 24 h after createdAt, then hidden from view;
+//                          kept in the database, never deleted. Photo JPEG (<=150 KB) lives in webStories/{id}/photo/main.
+//   webStories/{id}/views/{uid}      who viewed (only the author and the parish office can read the list).
+//   webStories/{id}/reactions/{uid}  one emoji per member.
+//   webComments/{id}       comments on stories. Members' show at once; visitors' wait as 'Pending' until approved.
 //   webModLog/{id}         moderation audit trail (who approved / hid what, when). Append-only.
 //   parishes/{p}/rosters   (Portal) PUBLISHED rosters become readable by that parish's website members.
 // Website members have no users/{uid} doc, so every other Portal rule (members, giving, ...) denies them.
@@ -33,6 +39,7 @@ service cloud.firestore {
     function str(v, max) { return v is string && v.size() > 0 && v.size() <= max; }
     // ---- copies of existing Portal rules (do NOT paste these; the Portal already has them) ----
     match /users/{uid} { allow read: if signedIn() && request.auth.uid == uid; }
+    match /parishes/{parishId}/{col}/{id} { allow read: if isParishAdminOf(parishId) && col in ['members', 'clergy']; }
     match /publicInfo/{parishId} { allow read: if true; }
     match /bibleReadings/{id} { allow read: if true; }
 
@@ -51,7 +58,8 @@ service cloud.firestore {
     function optUrl(m, k, re) { return !(k in m) || m[k] == '' || (m[k] is string && m[k].size() <= 300 && m[k].matches(re)); }
     function optId(m, k, re) { return !(k in m) || m[k] == '' || (m[k] is string && m[k].matches(re)); }
     function validMedia(m) {
-      return m is map && m.keys().hasOnly(['youtubeChannelId', 'youtubeUrl', 'playlistId', 'pastVideos', 'facebookUrl', 'tiktokUrl', 'instagramUrl'])
+      return m is map && m.keys().hasOnly(['youtubeChannelId', 'youtubeUrl', 'playlistId', 'pastVideos', 'facebookUrl', 'facebookName', 'tiktokUrl', 'instagramUrl'])
+        && (!('facebookName' in m) || (m.facebookName is string && m.facebookName.size() <= 80))
         && optId(m, 'youtubeChannelId', '^UC[A-Za-z0-9_-]{22}$')
         && optId(m, 'playlistId', '^(PL|UU|OL|FL)[A-Za-z0-9_-]{10,40}$')
         && optUrl(m, 'youtubeUrl', '^https://(www\\.|m\\.)?youtube\\.com/[^\\s"<>]*$')
@@ -77,6 +85,35 @@ service cloud.firestore {
         && (!('updatedBy' in request.resource.data) || request.resource.data.updatedBy == request.auth.uid);
     }
 
+    // ---------------- Logins (FREE PLAN: no Cloud Function) ----------------
+    function emailOf(no, v) {
+      return v == 1 ? no.lower() + '@members.ijaye.invalid' : no.lower() + '.v' + string(v) + '@members.ijaye.invalid';
+    }
+    function memberRec(no) {
+      return get(docAt('parishes/' + ijayeParish() + '/' + (no.matches('.*-CLG-[0-9]+$') ? 'clergy' : 'members') + '/' + no)).data;
+    }
+    match /webClaims/{uid} {
+      allow read: if (signedIn() && request.auth.uid == uid) || isModerator();
+      // Written by the brand-new Auth user (secondary app on the parish office phone): its own email must be the
+      // synthetic email of that member number + version. Anyone can create an Auth user, but a claim alone grants nothing.
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['memberNo', 'v'])
+        && request.resource.data.memberNo is string && request.resource.data.memberNo.matches('^CCC-([A-Z]{2,4}-[A-Z]{2,4}-)?(MBR|CLG)-[0-9]{3,}$')
+        && request.resource.data.v is int && request.resource.data.v >= 1 && request.resource.data.v <= 999
+        && request.auth.token.email == emailOf(request.resource.data.memberNo, request.resource.data.v);
+      allow update, delete: if false;
+    }
+    match /webLogin/{memberNo} {
+      allow get: if true;      // the sign-in page needs the current login version of the number typed
+      allow list: if isModerator();
+      allow write: if isIjayeAdmin()
+        && request.resource.data.keys().hasOnly(['v', 'uid', 'updatedAt'])
+        && request.resource.data.updatedAt == request.time
+        && getAfter(docAt('webAccounts/' + request.resource.data.uid)).data.memberNo == memberNo
+        && getAfter(docAt('webAccounts/' + request.resource.data.uid)).data.v == request.resource.data.v
+        && getAfter(docAt('webAccounts/' + request.resource.data.uid)).data.status == 'Active';
+    }
+
     match /webAccounts/{uid} {
       allow read: if (signedIn() && request.auth.uid == uid) || isIjayeAdmin() || isSuper();
       // A member may only clear their own "must change password" flag (after changing it in Firebase Auth).
@@ -86,12 +123,36 @@ service cloud.firestore {
         && request.resource.data.mustChangePassword == false
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mustChangePassword', 'passwordChangedAt'])
         && request.resource.data.passwordChangedAt == request.time;
-      allow create, delete: if false;   // Cloud Function (Admin SDK) only
+      // FREE PLAN issue: the Ijaye admin creates the account for an Auth user that already claimed this number,
+      // only for an Active Ijaye record, name copied from the record, and only together with its audit entry.
+      allow create: if isIjayeAdmin()
+        && request.resource.data.keys().hasOnly(['memberNo', 'parishId', 'displayName', 'status', 'mustChangePassword', 'v', 'issuedBy', 'issuedAt'])
+        && request.resource.data.parishId == ijayeParish()
+        && request.resource.data.status == 'Active' && request.resource.data.mustChangePassword == true
+        && request.resource.data.issuedBy == request.auth.uid && request.resource.data.issuedAt == request.time
+        && get(docAt('webClaims/' + uid)).data.memberNo == request.resource.data.memberNo
+        && get(docAt('webClaims/' + uid)).data.v == request.resource.data.v
+        && memberRec(request.resource.data.memberNo).status == 'Active'
+        && request.resource.data.displayName == memberRec(request.resource.data.memberNo).fullName
+        && existsAfter(docAt('webAudit/issue_' + uid));
+      // The admin can retire a login (replaced by a newer one, or switched off). Never re-activated: issue a new one.
+      allow update: if isIjayeAdmin() && resource.data.status == 'Active'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'statusBy', 'statusAt'])
+        && request.resource.data.status in ['Replaced', 'Disabled']
+        && request.resource.data.statusBy == request.auth.uid && request.resource.data.statusAt == request.time
+        && existsAfter(docAt('webAudit/' + request.resource.data.status.lower() + '_' + uid));
+      allow delete: if false;
     }
 
     match /webAudit/{id} {
       allow read: if isIjayeAdmin() || isSuper();
-      allow write: if false;            // Cloud Function (Admin SDK) only
+      allow create: if isIjayeAdmin()
+        && request.resource.data.keys().hasOnly(['action', 'memberNo', 'uid', 'v', 'by', 'at'])
+        && request.resource.data.by == request.auth.uid && request.resource.data.at == request.time
+        && ((request.resource.data.action == 'issueTempPassword' && id == 'issue_' + request.resource.data.uid)
+          || (request.resource.data.action == 'replaced' && id == 'replaced_' + request.resource.data.uid)
+          || (request.resource.data.action == 'disabled' && id == 'disabled_' + request.resource.data.uid));
+      allow update, delete: if false;
     }
 
     // ---- Duty roster (Portal collection). PASTE INTO the Portal's existing `match /rosters/{id}` read line as:
@@ -100,9 +161,20 @@ service cloud.firestore {
       allow read: if resource.data.status == 'Published' && isWebMember() && parishId == ijayeParish();
     }
 
-    // ---- Members' wall. No private messages exist anywhere: everything here is a wall post or a comment.
+    // ---------------- Birthdays list (name + day + month only) ----------------
+    match /webBirthdays/{id} {
+      allow read: if isWebMember() || isModerator();
+      allow create, update: if isModerator() && id.matches('^[A-Za-z0-9_-]{1,40}$')
+        && request.resource.data.keys().hasOnly(['name', 'day', 'month'])
+        && str(request.resource.data.name, 60)
+        && request.resource.data.month is int && request.resource.data.month >= 1 && request.resource.data.month <= 12
+        && request.resource.data.day is int && request.resource.data.day >= 1 && request.resource.data.day <= 31;
+      allow delete: if isModerator();
+    }
+
+    // ---------------- Stories (members' wall). No private messages exist anywhere. ----------------
     // Moderation changes only `status` (Visible <-> Hidden), bumps modVersion and MUST write a webModLog entry in the
-    // same batch. Nothing is ever deleted.
+    // same batch. Nothing is ever deleted; after 24 h a story simply stops showing.
     function moderated(target) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'modVersion', 'moderatedBy', 'moderatedAt'])
         && request.resource.data.status in ['Visible', 'Hidden']
@@ -110,51 +182,98 @@ service cloud.firestore {
         && request.resource.data.moderatedBy == request.auth.uid && request.resource.data.moderatedAt == request.time
         && existsAfter(docAt('webModLog/' + target + '_' + string(request.resource.data.modVersion)));
     }
-    match /webWall/{postId} {
-      allow read: if isModerator()
-        || (isWebMember() && (resource.data.status == 'Visible' || resource.data.authorUid == request.auth.uid))
-        || (resource.data.status == 'Visible' && resource.data.visibility == 'public');
-      allow create: if isWebMember()
-        && request.resource.data.keys().hasOnly(['kind', 'authorUid', 'authorName', 'text', 'photoPath', 'visibility', 'status', 'modVersion', 'createdAt'])
-        && request.resource.data.kind == 'post'
-        && request.resource.data.authorUid == request.auth.uid
-        && request.resource.data.authorName == webAcct().displayName
-        && str(request.resource.data.text, 1000)
-        && (request.resource.data.photoPath == ''
-            || request.resource.data.photoPath.matches('^web/wall/' + request.auth.uid + '/' + postId + '/[A-Za-z0-9._-]{1,60}$'))
-        && request.resource.data.visibility in ['members', 'public']
-        && request.resource.data.status == 'Visible' && request.resource.data.modVersion == 0
-        && request.resource.data.createdAt == request.time;
-      // Admin approves / hides; the author may hide (never un-hide) their own post.
+    function story(id) { return get(docAt('webStories/' + id)).data; }
+    function canSeeStory(s) {
+      return isModerator()
+        || (isWebMember() && (s.status == 'Visible' || s.authorUid == request.auth.uid))
+        || (s.status == 'Visible' && s.visibility == 'public');
+    }
+    // "Today" in Lagos (UTC+1, no daylight saving) from the server clock.
+    function lagosNow() { return request.time + duration.value(1, 'h'); }
+    // createdAt is the server clock; a story shows while createdAt > now - 24 h (the page queries on it).
+    function storyBase(d) { return d.status == 'Visible' && d.modVersion == 0 && d.createdAt == request.time; }
+    match /webStories/{id} {
+      // (resource == null: a member may check that today's birthday story does not exist yet.)
+      allow read: if (resource == null && isWebMember()) || canSeeStory(resource.data);
+      allow create: if (
+          // Member story: text on colour, or photo (+ caption). Photo sub-doc must be written in the same batch.
+          isWebMember() && !id.matches('^bday_.*')
+          && request.resource.data.keys().hasOnly(['kind', 'authorUid', 'authorName', 'text', 'bg', 'hasPhoto', 'visibility', 'status', 'modVersion', 'createdAt'])
+          && request.resource.data.authorUid == request.auth.uid
+          && request.resource.data.authorName == webAcct().displayName
+          && request.resource.data.visibility in ['members', 'public']
+          && request.resource.data.bg is int && request.resource.data.bg >= 0 && request.resource.data.bg <= 7
+          && ((request.resource.data.kind == 'text' && request.resource.data.hasPhoto == false && str(request.resource.data.text, 500))
+            || (request.resource.data.kind == 'photo' && request.resource.data.hasPhoto == true
+              && request.resource.data.text is string && request.resource.data.text.size() <= 300
+              && existsAfter(docAt('webStories/' + id + '/photo/main'))))
+          && storyBase(request.resource.data)
+        ) || (
+          // Birthday story: made by the first signed-in member to open the site that day. The id is fixed per
+          // person per Lagos date, so a second copy is an update (refused); text is fixed; date must be today.
+          isWebMember()
+          && request.resource.data.keys().hasOnly(['kind', 'authorUid', 'authorName', 'text', 'bg', 'hasPhoto', 'visibility', 'status', 'modVersion', 'createdAt', 'bdayId', 'y', 'm', 'd'])
+          && request.resource.data.kind == 'birthday' && request.resource.data.authorUid == 'system' && request.resource.data.authorName == 'Ijaye Parish'
+          && request.resource.data.hasPhoto == false && request.resource.data.bg == 0 && request.resource.data.visibility == 'members'
+          && request.resource.data.y == lagosNow().year() && request.resource.data.m == lagosNow().month() && request.resource.data.d == lagosNow().day()
+          && id == 'bday_' + string(request.resource.data.y) + '_' + string(request.resource.data.m) + '_' + string(request.resource.data.d) + '_' + request.resource.data.bdayId
+          && exists(docAt('webBirthdays/' + request.resource.data.bdayId))
+          && get(docAt('webBirthdays/' + request.resource.data.bdayId)).data.month == request.resource.data.m
+          && get(docAt('webBirthdays/' + request.resource.data.bdayId)).data.day == request.resource.data.d
+          && request.resource.data.text == 'Halleluyah 🙌, happy birthday ' + get(docAt('webBirthdays/' + request.resource.data.bdayId)).data.name
+          && storyBase(request.resource.data)
+        );
+      // Admin approves / hides; the author may hide (never un-hide) their own story.
       allow update: if (isModerator() || (isWebMember() && resource.data.authorUid == request.auth.uid
-          && request.resource.data.status == 'Hidden')) && moderated('post_' + postId);
+          && request.resource.data.status == 'Hidden')) && moderated('story_' + id);
       allow delete: if false;
 
-      match /likes/{uid} {
+      // Photo: phone-compressed JPEG data URL (<= ~150 KB). Written once with its story; never changed.
+      match /photo/{p} {
+        allow read: if canSeeStory(story(id));
+        allow create: if p == 'main' && isWebMember() && !exists(docAt('webStories/' + id))
+          && getAfter(docAt('webStories/' + id)).data.authorUid == request.auth.uid
+          && getAfter(docAt('webStories/' + id)).data.hasPhoto == true
+          && request.resource.data.keys().hasOnly(['data'])
+          && request.resource.data.data is string && request.resource.data.data.size() <= 205000
+          && request.resource.data.data.matches('^data:image/jpeg;base64,[A-Za-z0-9+/=]+$');
+        allow update, delete: if false;
+      }
+      // Who viewed: each member records their own view once; only the author (and the office) see the list.
+      match /views/{uid} {
+        allow read: if signedIn() && (uid == request.auth.uid || story(id).authorUid == request.auth.uid || isModerator());
+        allow create: if isWebMember() && uid == request.auth.uid && story(id).authorUid != uid
+          && request.resource.data.keys().hasOnly(['name', 'at'])
+          && request.resource.data.name == webAcct().displayName && request.resource.data.at == request.time
+          && story(id).status == 'Visible';
+        allow update, delete: if false;
+      }
+      // Emoji reactions: one per member, own only, may change or remove it.
+      match /reactions/{uid} {
         allow read: if isWebMember() || isModerator();
-        allow create: if isWebMember() && uid == request.auth.uid
-          && request.resource.data.keys().hasOnly(['at']) && request.resource.data.at == request.time
-          && get(docAt('webWall/' + postId)).data.status == 'Visible';
-        allow delete: if isWebMember() && uid == request.auth.uid;   // un-like
-        allow update: if false;
+        allow create, update: if isWebMember() && uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['emoji', 'at']) && request.resource.data.at == request.time
+          && request.resource.data.emoji in ['🙏', '❤️', '🙌', '🎉', '😂', '😮']
+          && story(id).status == 'Visible';
+        allow delete: if isWebMember() && uid == request.auth.uid;
       }
     }
 
     match /webComments/{id} {
-      // postPublic is copied from the post at creation (a post's visibility never changes), so visitor queries can be checked.
+      // storyPublic is copied from the story at creation (visibility never changes), so visitor queries can be checked.
       allow read: if isModerator()
-        || (resource.data.status == 'Visible' && (isWebMember() || resource.data.postPublic == true));
-      allow create: if request.resource.data.keys().hasOnly(['postId', 'postPublic', 'authorUid', 'authorName', 'text', 'visitor', 'status', 'modVersion', 'createdAt'])
+        || (resource.data.status == 'Visible' && (isWebMember() || resource.data.storyPublic == true));
+      allow create: if request.resource.data.keys().hasOnly(['storyId', 'storyPublic', 'authorUid', 'authorName', 'text', 'visitor', 'status', 'modVersion', 'createdAt'])
         && str(request.resource.data.text, 500) && request.resource.data.modVersion == 0 && request.resource.data.createdAt == request.time
-        && get(docAt('webWall/' + request.resource.data.postId)).data.status == 'Visible'
-        && request.resource.data.postPublic == (get(docAt('webWall/' + request.resource.data.postId)).data.visibility == 'public')
+        && story(request.resource.data.storyId).status == 'Visible'
+        && request.resource.data.storyPublic == (story(request.resource.data.storyId).visibility == 'public')
         && (
           // Member: shows at once.
           (isWebMember() && request.resource.data.visitor == false && request.resource.data.status == 'Visible'
             && request.resource.data.authorUid == request.auth.uid && request.resource.data.authorName == webAcct().displayName)
-          // Visitor (not signed in): only on public posts, always Pending until an admin approves.
+          // Visitor (not signed in): only on public stories, always Pending until an admin approves.
           || (!signedIn() && request.resource.data.visitor == true && request.resource.data.status == 'Pending'
-            && request.resource.data.postPublic == true && request.resource.data.authorUid == ''
+            && request.resource.data.storyPublic == true && request.resource.data.authorUid == ''
             && str(request.resource.data.authorName, 60))
         );
       allow update: if isModerator() && moderated('cmt_' + id);
@@ -168,8 +287,8 @@ service cloud.firestore {
         && request.resource.data.action in ['approve', 'hide', 'unhide']
         && (!('reason' in request.resource.data) || request.resource.data.reason.size() <= 300)
         && (
-          (request.resource.data.target.matches('^webWall/[A-Za-z0-9_-]+$')
-            && id == 'post_' + request.resource.data.target.split('/')[1] + '_' + string(getAfter(docAt(request.resource.data.target)).data.modVersion)
+          (request.resource.data.target.matches('^webStories/[A-Za-z0-9_-]+$')
+            && id == 'story_' + request.resource.data.target.split('/')[1] + '_' + string(getAfter(docAt(request.resource.data.target)).data.modVersion)
             && (isModerator() || (isWebMember() && getAfter(docAt(request.resource.data.target)).data.authorUid == request.auth.uid)))
           || (request.resource.data.target.matches('^webComments/[A-Za-z0-9_-]+$') && isModerator()
             && id == 'cmt_' + request.resource.data.target.split('/')[1] + '_' + string(getAfter(docAt(request.resource.data.target)).data.modVersion))

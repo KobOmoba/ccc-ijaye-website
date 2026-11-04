@@ -1,4 +1,5 @@
 rules_version = '2';
+// FOR AFTER APPROVAL (Blaze plan, Cloud Storage). The FREE-plan demo stores photos in Firestore instead.
 // DRAFT - NOT DEPLOYED. Cloud Storage rules for the Ijaye website (bucket of project ccc-data-aarinat).
 // Wall photos only: web/wall/{uid}/{postId}/{file}. The website shrinks photos to JPEG (max 1280px) before upload.
 // Limits: images only (jpeg/png/webp), under 2 MB, uploaded by an active website member into their own folder.

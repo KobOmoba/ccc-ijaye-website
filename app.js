@@ -1,12 +1,13 @@
 // CCC Archdiocesan HQ Ijaye website - core: Firebase, views, sign-in.
 // Members sign in with their Parish Portal member number. Behind the scenes that number maps to a
 // synthetic Firebase Auth email (never shown, never mailed). Passwords live ONLY in Firebase Auth.
-// Accounts are created by the parish admin through the Cloud Function in functions/ (not from this page).
+// FREE PLAN: accounts are issued by the Ijaye parish admin from Parish office > Logins (issue-login.js).
+// A 'reset' makes a new login version (.v2 email); webLogin/{number} says which one is current.
 // The Ijaye parish admin signs in with their normal Portal email to reach Settings + Moderation.
 
-// Test mode: ?emulator=1 uses the local Auth + Firestore + Storage emulators under a demo project id.
+// Test mode: ?emulator=1 uses the local Auth + Firestore emulators under a demo project id.
 const USE_EMULATOR = new URLSearchParams(location.search).has("emulator");
-let auth = null, db = null, storage = null, account = null;
+let auth = null, db = null, account = null;
 // who: "visitor" | "member" | "admin"
 const state = { who: "visitor", uid: null, parishId: null, home: {}, isAdmin: false };
 const $ = (id) => document.getElementById(id);
@@ -29,7 +30,7 @@ function showMe() { show(state.who === "admin" ? "admin" : state.who === "member
 // CCC-IJY-ABK-MBR-001 (new style) or CCC-MBR-001 (old style); members and clergy both have numbers.
 function normaliseNo(raw) { return String(raw || "").trim().toUpperCase().replace(/\s+/g, ""); }
 function isMemberNo(no) { return /^CCC-([A-Z]{2,4}-[A-Z]{2,4}-)?(MBR|CLG)-[0-9]{3,}$/.test(no); }
-function emailFor(no) { return no.toLowerCase() + "@" + window.SITE_CONFIG.memberEmailDomain; }
+function emailFor(no, v = 1) { return no.toLowerCase() + (v > 1 ? ".v" + v : "") + "@" + window.SITE_CONFIG.memberEmailDomain; }
 
 function setError(id, msg) { const el = $(id); el.textContent = msg || ""; el.classList.toggle("hidden", !msg); }
 function busy(id, on, label) { const b = $(id); b.disabled = on; b.style.opacity = on ? .6 : 1; if (label) b.textContent = label; }
@@ -42,14 +43,13 @@ window.addEventListener("load", async () => {
         if (window.renderPublic) renderPublic();
         return;
     }
-    firebase.initializeApp(USE_EMULATOR ? { ...cfg, apiKey: "demo-key", projectId: "demo-ccc", storageBucket: "demo-ccc" } : cfg);
+    state.appConfig = USE_EMULATOR ? { ...cfg, apiKey: "demo-key", projectId: "demo-ccc" } : cfg;
+    firebase.initializeApp(state.appConfig);
     auth = firebase.auth();
     db = firebase.firestore();
-    storage = firebase.storage();
     if (USE_EMULATOR) {
         auth.useEmulator("http://127.0.0.1:9099", { disableWarnings: true });
         db.useEmulator("127.0.0.1", 8080);
-        storage.useEmulator("127.0.0.1", 9199);
     }
     const start = (location.hash || "").slice(1);
     if (window.loadPublic) await loadPublic().catch(e => console.warn("public", e.message));
@@ -102,7 +102,8 @@ async function signIn() {
     if (!auth) return;
     busy("signinBtn", true, "Signing in...");
     try {
-        await auth.signInWithEmailAndPassword(emailFor(no), pw);
+        const login = await db.collection("webLogin").doc(no).get().catch(() => null);
+        await auth.signInWithEmailAndPassword(emailFor(no, login && login.exists ? login.data().v : 1), pw);
         $("password").value = "";
     } catch (e) {
         // One message for every failure, so the page never reveals which member numbers have accounts.
