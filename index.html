@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Celestial Church of Christ — Ijaye, Abeokuta</title>
+    <meta name="description" content="Celestial Church of Christ, Archdiocesan Headquarters, Ijaye, Abeokuta, Ogun State.">
+    <meta name="theme-color" content="#031d48">
+    <link rel="icon" href="assets/ccc-logo.png" type="image/png">
+    <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js" defer></script>
+    <link rel="stylesheet" href="styles.css">
+    <script src="config.js" defer></script>
+    <script src="app.js" defer></script>
+</head>
+<body class="font-sans">
+    <div class="rainbow-stripe"></div>
+    <header class="bg-white border-b sticky top-0 z-20">
+        <div class="max-w-3xl mx-auto px-4 py-2 flex items-center gap-3">
+            <img src="assets/ccc-logo.png" alt="Celestial Church of Christ logo" class="h-10 w-auto">
+            <div class="leading-tight flex-1 min-w-0">
+                <p class="text-[11px] font-black tracking-wider text-navy uppercase truncate">Celestial Church of Christ</p>
+                <p class="text-[10px] font-semibold text-gold uppercase tracking-wide truncate">Archdiocesan HQ · Ijaye, Abeokuta</p>
+            </div>
+            <button id="headerSignIn" onclick="show('signin')" class="btn-navy text-xs font-bold px-3 py-2 rounded-lg"><i class="fa-solid fa-user-lock"></i><span class="sr-only">Member sign in</span></button>
+            <button id="headerSignOut" onclick="signOut()" class="hidden border border-gray-300 text-xs font-bold px-3 py-2 rounded-lg text-navy">Sign out</button>
+        </div>
+    </header>
+
+    <main class="max-w-3xl mx-auto">
+        <!-- ============ PUBLIC HOME ============ -->
+        <section id="view-home" class="view active">
+            <div class="hero-arch px-4 pt-8 pb-6 text-center">
+                <img src="assets/ccc-logo.png" alt="" class="h-36 w-auto mx-auto mb-3">
+                <p class="text-2xl font-black text-navy">Halleluyah 🙌</p>
+                <h1 class="mt-2 text-lg font-black uppercase tracking-wider text-navy">Celestial Church of Christ</h1>
+                <p class="text-sm font-bold text-gold uppercase tracking-wide">Archdiocesan Headquarters, Ijaye, Abeokuta</p>
+                <p class="text-xs text-gray-500 mt-1">Ogun State, Nigeria</p>
+                <div class="rainbow-stripe rounded w-24 mx-auto my-4"></div>
+                <p class="text-sm text-gray-600 max-w-sm mx-auto">You are welcome to worship with us. Come in white, come in peace.</p>
+                <div class="mt-5 flex flex-col gap-2 max-w-xs mx-auto">
+                    <a href="#watch" class="btn-gold font-bold py-3 rounded-xl"><i class="fa-solid fa-circle-play mr-2"></i>Watch live</a>
+                    <button onclick="show('signin')" class="btn-navy font-bold py-3 rounded-xl"><i class="fa-solid fa-user-lock mr-2"></i>Member sign in</button>
+                </div>
+            </div>
+
+            <div class="px-4 space-y-4 pb-8">
+                <section id="times" class="card p-4">
+                    <h2 class="font-black text-navy flex items-center gap-2"><span class="band-dot" style="background:var(--rb-1)"></span>Service times</h2>
+                    <ul id="serviceTimes" class="mt-3 divide-y text-sm">
+                        <li class="py-2 flex justify-between"><span>Sunday Service</span><span class="text-gray-400">time to be added</span></li>
+                        <li class="py-2 flex justify-between"><span>Wednesday Mercy Day</span><span class="text-gray-400">time to be added</span></li>
+                        <li class="py-2 flex justify-between"><span>Friday Power Day</span><span class="text-gray-400">time to be added</span></li>
+                    </ul>
+                    <p class="text-[11px] text-gray-400 mt-2">Placeholder. The parish office will confirm the times.</p>
+                </section>
+
+                <section id="watch" class="card p-4">
+                    <h2 class="font-black text-navy flex items-center gap-2"><span class="band-dot" style="background:var(--rb-3)"></span>Watch live / Past services</h2>
+                    <p class="soon mt-1">Coming in step 2</p>
+                    <div class="mt-3 aspect-video rounded-xl bg-navy flex flex-col items-center justify-center text-white">
+                        <i class="fa-solid fa-tower-broadcast text-3xl text-[color:var(--gold-light)]"></i>
+                        <p class="text-sm font-bold mt-2">Live service will show here</p>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-3">Past service recordings from our YouTube channel will be listed here.</p>
+                </section>
+
+                <section id="media" class="card p-4">
+                    <h2 class="font-black text-navy flex items-center gap-2"><span class="band-dot" style="background:var(--rb-4)"></span>Our media</h2>
+                    <p class="soon mt-1">Coming in step 2</p>
+                    <div class="grid grid-cols-4 gap-2 mt-3 text-center text-[11px] text-gray-600">
+                        <div class="p-2 rounded-xl border"><i class="fa-brands fa-youtube text-2xl" style="color:var(--rb-1)"></i><p>YouTube</p></div>
+                        <div class="p-2 rounded-xl border"><i class="fa-brands fa-facebook text-2xl" style="color:var(--navy-2)"></i><p>Facebook</p></div>
+                        <div class="p-2 rounded-xl border"><i class="fa-brands fa-tiktok text-2xl text-gray-900"></i><p>TikTok</p></div>
+                        <div class="p-2 rounded-xl border"><i class="fa-brands fa-instagram text-2xl" style="color:var(--rb-5)"></i><p>Instagram</p></div>
+                    </div>
+                </section>
+            </div>
+        </section>
+
+        <!-- ============ SIGN IN ============ -->
+        <section id="view-signin" class="view px-4 py-8">
+            <div class="card p-5 max-w-sm mx-auto">
+                <img src="assets/ccc-logo.png" alt="" class="h-20 w-auto mx-auto">
+                <h2 class="text-center font-black text-navy mt-2">Member sign in</h2>
+                <p class="text-center text-xs text-gray-500">For registered members of Ijaye parish</p>
+                <div class="rainbow-stripe rounded my-4"></div>
+                <label class="block text-xs font-bold text-gray-700" for="memberNo">Member number</label>
+                <input id="memberNo" autocomplete="username" autocapitalize="characters" placeholder="e.g. CCC-IJY-ABK-MBR-001" class="w-full border rounded-lg px-3 py-3 mt-1 uppercase">
+                <label class="block text-xs font-bold text-gray-700 mt-3" for="password">Password</label>
+                <input id="password" type="password" autocomplete="current-password" class="w-full border rounded-lg px-3 py-3 mt-1">
+                <p id="signinError" class="hidden text-sm text-red-700 mt-3"></p>
+                <button id="signinBtn" onclick="signIn()" class="btn-gold w-full font-bold py-3 rounded-xl mt-4">Sign in</button>
+                <p class="text-[11px] text-gray-500 mt-4 text-center">No password yet, or forgot it? Ask the parish office for a temporary password.</p>
+                <button onclick="show('home')" class="w-full text-sm text-navy font-semibold mt-3">Back to home</button>
+            </div>
+        </section>
+
+        <!-- ============ FIRST LOGIN: CHANGE PASSWORD ============ -->
+        <section id="view-changepw" class="view px-4 py-8">
+            <div class="card p-5 max-w-sm mx-auto">
+                <p class="text-xl font-black text-navy text-center">Halleluyah 🙌</p>
+                <h2 class="text-center font-black text-navy mt-1">Choose your own password</h2>
+                <p class="text-center text-xs text-gray-500 mt-1">You signed in with a temporary password. Please set a new one to continue.</p>
+                <div class="rainbow-stripe rounded my-4"></div>
+                <label class="block text-xs font-bold text-gray-700" for="newPw">New password (at least 8 characters)</label>
+                <input id="newPw" type="password" autocomplete="new-password" class="w-full border rounded-lg px-3 py-3 mt-1">
+                <label class="block text-xs font-bold text-gray-700 mt-3" for="newPw2">Type it again</label>
+                <input id="newPw2" type="password" autocomplete="new-password" class="w-full border rounded-lg px-3 py-3 mt-1">
+                <p id="changeError" class="hidden text-sm text-red-700 mt-3"></p>
+                <button id="changeBtn" onclick="changePassword()" class="btn-gold w-full font-bold py-3 rounded-xl mt-4">Save new password</button>
+            </div>
+        </section>
+
+        <!-- ============ MEMBERS AREA (placeholder) ============ -->
+        <section id="view-members" class="view px-4 py-8">
+            <div class="card p-5">
+                <p id="memberGreeting" class="text-xl font-black text-navy">Halleluyah 🙌</p>
+                <p id="memberNoLine" class="text-xs text-gray-500 mt-1"></p>
+                <div class="rainbow-stripe rounded my-4"></div>
+                <p class="soon">Members' wall coming in a later step</p>
+                <p class="text-sm text-gray-600 mt-2">Photos, well wishes and birthday announcements for Ijaye members will appear here.</p>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-navy text-white text-center px-4 py-6 mt-4">
+        <p class="text-xs font-black tracking-wider uppercase">Celestial Church of Christ</p>
+        <p class="text-[11px] text-[color:var(--gold-light)] uppercase">Archdiocesan Headquarters, Ijaye, Abeokuta</p>
+        <div class="rainbow-stripe rounded w-20 mx-auto mt-3"></div>
+    </footer>
+</body>
+</html>

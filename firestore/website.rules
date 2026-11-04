@@ -1,0 +1,66 @@
+rules_version = '2';
+// DRAFT - NOT DEPLOYED. Rules for the Ijaye website's own collections in project ccc-data-aarinat.
+// Firestore has ONE rules file per project, so when approved the block marked "WEBSITE" below is pasted
+// into the Parish Portal's firestore.rules (CCC-DATA/firestore/firestore.rules) and deployed from there.
+// The helper functions at the top already exist in the Portal file with the same meaning.
+//
+// Collections:
+//   webSite/config         { parishId }            which Portal parish is Ijaye. Super Admin only.
+//   webSite/home           { serviceTimes: [...] } public page content. Ijaye parish admin edits.
+//   webAccounts/{uid}      { memberNo, parishId, displayName, status, mustChangePassword, ... }
+//                          created ONLY by the Cloud Function (Admin SDK). No passwords, ever.
+//   webAudit/{id}          who issued / reset which login. Written ONLY by the Cloud Function.
+// Website members have no users/{uid} doc, so every Portal rule (members, giving, ...) denies them.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function docAt(p) { return path('/databases/' + database + '/documents/' + p); }
+    function hasProfile() { return signedIn() && exists(docAt('users/' + request.auth.uid)); }
+    function profile() { return get(docAt('users/' + request.auth.uid)).data; }
+    function role() { return hasProfile() ? profile().role : ''; }
+    function isSuper() { return role() == 'super_admin'; }
+    function isParishAdminOf(parishId) {
+      return role() == 'parish_admin' && profile().parishId == parishId
+        && get(docAt('parishes/' + parishId)).data.status == 'Approved';
+    }
+
+    // ===================== WEBSITE (paste from here) =====================
+    function ijayeParish() {
+      return exists(docAt('webSite/config')) ? get(docAt('webSite/config')).data.parishId : '__none__';
+    }
+    function isIjayeAdmin() { return isParishAdminOf(ijayeParish()); }
+
+    match /webSite/config {
+      allow read: if isSuper() || isIjayeAdmin();
+      allow write: if isSuper()
+        && request.resource.data.keys().hasOnly(['parishId', 'updatedAt'])
+        && request.resource.data.parishId is string && request.resource.data.parishId.size() > 0;
+    }
+
+    match /webSite/home {
+      allow read: if true;   // public page content
+      allow write: if (isIjayeAdmin() || isSuper())
+        && request.resource.data.keys().hasOnly(['serviceTimes', 'updatedAt', 'updatedBy'])
+        && request.resource.data.serviceTimes is list && request.resource.data.serviceTimes.size() <= 12;
+    }
+
+    match /webAccounts/{uid} {
+      allow read: if (signedIn() && request.auth.uid == uid) || isIjayeAdmin() || isSuper();
+      // A member may only clear their own "must change password" flag (after changing it in Firebase Auth).
+      allow update: if signedIn() && request.auth.uid == uid
+        && resource.data.status == 'Active'
+        && resource.data.mustChangePassword == true
+        && request.resource.data.mustChangePassword == false
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mustChangePassword', 'passwordChangedAt'])
+        && request.resource.data.passwordChangedAt == request.time;
+      allow create, delete: if false;   // Cloud Function (Admin SDK) only
+    }
+
+    match /webAudit/{id} {
+      allow read: if isIjayeAdmin() || isSuper();
+      allow write: if false;            // Cloud Function (Admin SDK) only
+    }
+    // ===================== WEBSITE (paste to here) =======================
+  }
+}
