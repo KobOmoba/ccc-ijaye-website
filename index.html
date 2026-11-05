@@ -39,7 +39,11 @@
         <!-- ============ PUBLIC HOME ============ -->
         <section id="view-home" class="view active">
             <div class="hero-arch px-4 pt-8 pb-6 text-center">
-                <img src="assets/ccc-logo.png" alt="" class="h-36 w-auto mx-auto mb-3">
+                <video id="heroVideo" class="hero-video mx-auto mb-3" autoplay muted loop playsinline preload="metadata" poster="assets/video/hero-poster.jpg" aria-hidden="true" width="720" height="720">
+                    <source src="assets/video/hero-720.webm" type="video/webm">
+                    <source src="assets/video/hero-720.mp4" type="video/mp4">
+                </video>
+                <script>(function(){var v=document.getElementById('heroVideo');if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches){v.removeAttribute('autoplay');v.preload='none';v.pause();}})();</script>
                 <p class="text-2xl font-black text-navy">Halleluyah 🙌</p>
                 <h1 class="mt-2 text-lg font-black uppercase tracking-wider text-navy">Celestial Church of Christ</h1>
                 <p class="text-sm font-bold text-gold uppercase tracking-wide">Archdiocesan Headquarters, Ijaye, Abeokuta</p>
