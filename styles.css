@@ -102,3 +102,4 @@ textarea:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
 .cmp-caption { position: absolute; left: .75rem; right: .75rem; bottom: .75rem; background: rgba(0,0,0,.5); color: #fff; border-radius: .75rem; padding: .6rem .8rem; border: 0; }
 .swatch { width: 1.9rem; height: 1.9rem; border-radius: 999px; border: 2px solid rgba(255,255,255,.35); }
 .swatch.on { border-color: #fff; box-shadow: 0 0 0 2px var(--gold-light); }
+.hero-video { display: block; width: 100%; max-width: 320px; height: auto; aspect-ratio: 1 / 1; background: #fff; border-radius: 1rem; }
