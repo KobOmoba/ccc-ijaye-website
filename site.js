@@ -92,6 +92,7 @@ function renderMedia() {
         fb ? `<div class="card p-2 overflow-hidden"><iframe title="Facebook page" class="w-full" style="height:420px;border:0" loading="lazy"
             src="https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(fb)}&tabs=timeline&width=340&height=420&small_header=true&adapt_container_width=true"></iframe></div>` : "",
         card(safeUrl("tiktokUrl"), "fa-brands fa-tiktok", "TikTok", "#111827", "Short clips"),
-        card(safeUrl("instagramUrl"), "fa-brands fa-instagram", "Instagram", "linear-gradient(135deg,#773246,#aa1f1b,#b6940b)", "Pictures from church"),
+        // Instagram: church no longer uses it (Bayo, 5 Nov 2026); only shown if a link is ever added.
+        !safeUrl("instagramUrl") ? "" : card(safeUrl("instagramUrl"), "fa-brands fa-instagram", "Instagram", "linear-gradient(135deg,#773246,#aa1f1b,#b6940b)", "Pictures from church"),
     ].join("") + `<button onclick="show('watch')" class="w-full btn-gold font-bold py-3 rounded-xl"><i class="fa-solid fa-circle-play mr-2"></i>Watch live &amp; past services</button>`;
 }
