@@ -281,7 +281,7 @@ try {
   assert.equal(await page.locator('#mediaHub a[href="https://www.tiktok.com/@celeijayeabkta_ng"]').count(), 1);
   assert.equal(await page.locator('#mediaHub a[href="https://www.youtube.com/@cccijayearchdiocese"]').count(), 1);
   assert.equal(await page.locator('#mediaHub a[href="https://www.facebook.com/cccijayearchdiocese"]').count(), 1);
-  assert.equal(await page.locator('.media-card.off').count(), 1, 'only Instagram still a placeholder');
+  assert.equal(await page.locator('.media-card.off').count(), 0, 'no placeholder cards (Instagram hidden when no link)');
   await shot('19-media-hub-defaults', true);
 
   assert.deepEqual(errors, []);

@@ -32,11 +32,17 @@ async function loadPublic() {
     renderPublic();
 }
 
+// Each service gets its own icon and sash colour, matched by name.
+const SVC_STYLES = [[/prophet/i, "fa-eye", "#031d48"], [/new moon/i, "fa-circle-half-stroke", "#d63384"], [/vigil|night/i, "fa-moon", "#7b3fe4"],
+    [/wakati|adura|hour/i, "fa-hourglass-half", "#b6940b"], [/seeker/i, "fa-hands-praying", "#0a4923"], [/bible|class/i, "fa-book-bible", "#045c6b"],
+    [/mercy/i, "fa-heart", "#d63384"], [/evening/i, "fa-sun", "#e8590c"], [/morning|dawn/i, "fa-cloud-sun", "#3fa9f5"], [/power/i, "fa-bolt", "#b6940b"], [/sunday/i, "fa-church", "#aa1f1b"]];
+const svcStyle = (s) => (SVC_STYLES.find(([re]) => re.test(s)) || [0, "fa-bell", "#773246"]).slice(1);
+
 function renderPublic() {
     const i = state.info;
     if (i) {
         if ((i.services || []).length) {
-            $("serviceTimes").innerHTML = i.services.map(s => `<li class="py-2">${esc(s)}</li>`).join("");
+            $("serviceTimes").innerHTML = i.services.map(s => { const [ic, c] = svcStyle(s); return `<li class="svc" style="--c:${c}"><i class="fa-solid ${ic}"></i><b>${esc(s)}</b></li>`; }).join("");
             $("timesNote").textContent = "From the parish office.";
         }
         if (i.about) $("aboutText").textContent = i.about;
