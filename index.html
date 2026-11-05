@@ -12,12 +12,15 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js" defer></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js" defer></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js" defer></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap">
     <link rel="stylesheet" href="styles.css">
     <script src="config.js" defer></script>
     <script src="app.js" defer></script>
     <script src="site.js" defer></script>
     <script src="issue-login.js" defer></script>
     <script src="stories.js" defer></script>
+    <script src="gallery.js" defer></script>
     <script src="members.js" defer></script>
     <script src="admin.js" defer></script>
 </head>
@@ -38,55 +41,79 @@
     <main class="max-w-3xl mx-auto">
         <!-- ============ PUBLIC HOME ============ -->
         <section id="view-home" class="view active">
-            <div class="hero-arch px-4 pt-8 pb-6 text-center">
-                <video id="heroVideo" class="hero-video mx-auto mb-3" autoplay muted loop playsinline preload="metadata" poster="assets/video/hero-poster.jpg" aria-hidden="true" width="720" height="720">
-                    <source src="assets/video/hero-720.webm" type="video/webm">
-                    <source src="assets/video/hero-720.mp4" type="video/mp4">
-                </video>
-                <script>(function(){var v=document.getElementById('heroVideo');if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches){v.removeAttribute('autoplay');v.preload='none';v.pause();}})();</script>
-                <p class="text-2xl font-black text-navy">Halleluyah 🙌</p>
-                <h1 class="mt-2 text-lg font-black uppercase tracking-wider text-navy">Celestial Church of Christ</h1>
-                <p class="text-sm font-bold text-gold uppercase tracking-wide">Archdiocesan Headquarters, Ijaye, Abeokuta</p>
-                <p class="text-xs text-gray-500 mt-1">Ogun State, Nigeria</p>
-                <div class="rainbow-stripe rounded w-24 mx-auto my-4"></div>
-                <p id="aboutText" class="text-sm text-gray-600 max-w-sm mx-auto">You are welcome to worship with us. Come in white, come in peace.</p>
-                <div class="mt-5 flex flex-col gap-2 max-w-xs mx-auto">
-                    <button onclick="show('watch')" class="btn-gold font-bold py-3 rounded-xl"><i class="fa-solid fa-circle-play mr-2"></i>Watch live</button>
-                    <button id="heroMemberBtn" onclick="show('signin')" class="btn-navy font-bold py-3 rounded-xl"><i class="fa-solid fa-user-lock mr-2"></i>Member sign in</button>
-                </div>
-            </div>
-
-            <div class="px-4 space-y-4 pb-8">
-                <section id="times" class="card p-4">
-                    <h2 class="font-black text-navy flex items-center gap-2"><span class="band-dot" style="background:var(--rb-1)"></span>Service times</h2>
-                    <ul id="serviceTimes" class="mt-3 divide-y divide-gray-200 text-sm">
-                        <li class="py-2 flex justify-between"><span>Sunday Service</span><span class="text-gray-400">time to be added</span></li>
-                        <li class="py-2 flex justify-between"><span>Wednesday Mercy Day</span><span class="text-gray-400">time to be added</span></li>
-                        <li class="py-2 flex justify-between"><span>Friday Power Day</span><span class="text-gray-400">time to be added</span></li>
-                    </ul>
-                    <p id="timesNote" class="text-[11px] text-gray-400 mt-2">Placeholder. The parish office will confirm the times.</p>
-                </section>
-
-                <section id="readings" class="card p-4">
-                    <h2 class="font-black text-navy flex items-center gap-2"><span class="band-dot" style="background:var(--rb-2)"></span>This week's Bible readings</h2>
-                    <div id="readingsList" class="mt-3 text-sm space-y-3"><p class="text-gray-400">Readings will show here.</p></div>
-                </section>
-
-                <section id="visit" class="card p-4">
-                    <h2 class="font-black text-navy flex items-center gap-2"><span class="band-dot" style="background:var(--rb-3)"></span>Visit us</h2>
-                    <p id="addressText" class="text-sm text-gray-700 mt-3"><i class="fa-solid fa-location-dot text-gold mr-2"></i>Ijaye, Abeokuta, Ogun State</p>
-                    <div class="grid grid-cols-2 gap-2 mt-3">
-                        <a id="callBtn" class="hidden border rounded-xl py-3 text-center text-sm font-bold text-navy"><i class="fa-solid fa-phone mr-1"></i>Call us</a>
-                        <a id="mapBtn" target="_blank" rel="noopener" class="hidden border rounded-xl py-3 text-center text-sm font-bold text-navy"><i class="fa-solid fa-map-location-dot mr-1"></i>Open map</a>
+            <div class="hero-band">
+                <svg class="ribbons" viewBox="0 0 390 520" preserveAspectRatio="none" aria-hidden="true">
+                    <path class="rib r1" d="M-40 40 C80 -10 220 120 430 20" />
+                    <path class="rib r2" d="M-40 170 C110 110 230 250 430 150" />
+                    <path class="rib r3" d="M-40 420 C90 360 250 500 430 400" />
+                    <path class="rib r4" d="M-40 480 C120 430 240 540 430 470" />
+                </svg>
+                <div class="hero-inner px-4 pt-7 pb-8 text-center">
+                    <p class="praise-big">Halleluyah 🙌</p>
+                    <p class="welcome-line">Ẹ kú àbọ̀, welcome home</p>
+                    <div class="garment-frame">
+                        <video id="heroVideo" class="hero-video mx-auto" autoplay muted loop playsinline preload="metadata" poster="assets/video/hero-poster.jpg" aria-hidden="true" width="720" height="720">
+                            <source src="assets/video/hero-720.webm" type="video/webm">
+                            <source src="assets/video/hero-720.mp4" type="video/mp4">
+                        </video>
                     </div>
-                    <p id="visitNote" class="text-[11px] text-gray-400 mt-2">Phone and map link will be added by the parish office.</p>
-                </section>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <button onclick="show('watch')" class="card p-4 text-left"><i class="fa-solid fa-tower-broadcast text-xl" style="color:var(--rb-1)"></i><p class="font-black text-navy mt-2 text-sm">Live &amp; past services</p></button>
-                    <button onclick="show('media')" class="card p-4 text-left"><i class="fa-solid fa-photo-film text-xl" style="color:var(--rb-4)"></i><p class="font-black text-navy mt-2 text-sm">Our media</p></button>
+                    <script>(function(){var v=document.getElementById('heroVideo');if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches){v.removeAttribute('autoplay');v.preload='none';v.pause();}})();</script>
+                    <h1 class="hero-title">Celestial Church of Christ</h1>
+                    <p class="hero-sub">Archdiocesan Headquarters, Ijaye, Abeokuta, Ogun State</p>
+                    <p id="aboutText" class="hero-about">You are welcome to worship with us. Come in white, come in peace.</p>
+                    <div class="mt-5 grid grid-cols-2 gap-2 max-w-xs mx-auto">
+                        <button onclick="show('watch')" class="btn-sun font-bold py-3 rounded-full text-sm"><i class="fa-solid fa-circle-play mr-2"></i>Watch live</button>
+                        <button id="heroMemberBtn" onclick="show('signin')" class="btn-white font-bold py-3 rounded-full text-sm"><i class="fa-solid fa-user-lock mr-2"></i>Members</button>
+                    </div>
                 </div>
             </div>
+
+            <div class="praise-marquee" aria-hidden="true"><div class="pm-track">
+                <span>Halleluyah</span><span>Ẹ kú àbọ̀</span><span>Jah Jehovah</span><span>Ọlọ́run ni o</span><span>Praise the Lord</span><span>Yah Rah Sabbaoth</span>
+                <span>Halleluyah</span><span>Ẹ kú àbọ̀</span><span>Jah Jehovah</span><span>Ọlọ́run ni o</span><span>Praise the Lord</span><span>Yah Rah Sabbaoth</span>
+            </div></div>
+
+            <section id="times" class="band band-sun px-4 py-7">
+                <h2 class="sec-title"><span class="sash" style="--s:var(--rb-1)"></span>Come and worship</h2>
+                <p class="sec-sub">Our services through the week. All are welcome, in white garment.</p>
+                <ul id="serviceTimes" class="svc-grid mt-4">
+                    <li class="svc" style="--c:#aa1f1b"><i class="fa-solid fa-church"></i><b>Sunday Service</b><span>time to be added</span></li>
+                    <li class="svc" style="--c:#045c6b"><i class="fa-solid fa-book-bible"></i><b>Bible Class</b><span>time to be added</span></li>
+                    <li class="svc" style="--c:#7b3fe4"><i class="fa-solid fa-moon"></i><b>Night Vigil</b><span>time to be added</span></li>
+                    <li class="svc" style="--c:#b6940b"><i class="fa-solid fa-hourglass-half"></i><b>Wakati Adura</b><span>time to be added</span></li>
+                    <li class="svc" style="--c:#0a4923"><i class="fa-solid fa-hands-praying"></i><b>Seekers' Service</b><span>time to be added</span></li>
+                    <li class="svc" style="--c:#d63384"><i class="fa-solid fa-circle-half-stroke"></i><b>New Moon Service</b><span>time to be added</span></li>
+                    <li class="svc" style="--c:#031d48"><i class="fa-solid fa-eye"></i><b>Prophets' Vigil</b><span>time to be added</span></li>
+                </ul>
+                <p id="timesNote" class="text-[11px] text-gray-500 mt-3">Placeholder. The parish office will confirm the times.</p>
+            </section>
+
+            <section id="gallery" class="band band-peacock py-7">
+                <div class="px-4">
+                    <h2 class="sec-title text-white"><span class="sash" style="--s:var(--gold-light)"></span>Life at Ijaye</h2>
+                    <p class="sec-sub text-white/80">Worship, song, dance and fellowship.</p>
+                </div>
+                <div id="galleryGrid" class="gallery-grid px-4 mt-4"></div>
+            </section>
+
+            <section id="readings" class="band band-sky px-4 py-7">
+                <h2 class="sec-title"><span class="sash" style="--s:var(--rb-4)"></span>This week's Bible readings</h2>
+                <div id="readingsList" class="mt-4 text-sm space-y-3 readings-card"><p class="text-gray-400">Readings will show here.</p></div>
+            </section>
+
+            <section id="visit" class="band band-rose px-4 py-7">
+                <h2 class="sec-title"><span class="sash" style="--s:var(--rb-5)"></span>Visit us</h2>
+                <p id="addressText" class="text-sm text-gray-700 mt-3"><i class="fa-solid fa-location-dot text-gold mr-2"></i>Ijaye, Abeokuta, Ogun State</p>
+                <div class="grid grid-cols-2 gap-2 mt-3">
+                    <a id="callBtn" class="hidden visit-btn" style="--c:#0a4923"><i class="fa-solid fa-phone mr-1"></i>Call us</a>
+                    <a id="mapBtn" target="_blank" rel="noopener" class="hidden visit-btn" style="--c:#7b3fe4"><i class="fa-solid fa-map-location-dot mr-1"></i>Open map</a>
+                </div>
+                <p id="visitNote" class="text-[11px] text-gray-500 mt-2">Phone and map link will be added by the parish office.</p>
+                <div class="grid grid-cols-2 gap-3 mt-5">
+                    <button onclick="show('watch')" class="jump" style="--c:#aa1f1b"><i class="fa-solid fa-tower-broadcast"></i><span>Live &amp; past services</span></button>
+                    <button onclick="show('media')" class="jump" style="--c:#045c6b"><i class="fa-solid fa-photo-film"></i><span>Our media</span></button>
+                </div>
+            </section>
         </section>
 
         <!-- ============ WATCH: LIVE + PAST SERVICES ============ -->
@@ -267,11 +294,11 @@
     </footer>
 
     <nav class="bottom-nav" aria-label="Main">
-        <button data-nav="home" onclick="show('home')"><i class="fa-solid fa-house"></i><span>Home</span></button>
-        <button data-nav="watch" onclick="show('watch')"><i class="fa-solid fa-circle-play"></i><span>Watch</span></button>
-        <button data-nav="media" onclick="show('media')"><i class="fa-solid fa-share-nodes"></i><span>Media</span></button>
-        <button data-nav="wall" onclick="show('wall')"><i class="fa-solid fa-circle-notch"></i><span>Stories</span></button>
-        <button id="navMe" data-nav="me" onclick="showMe()"><i class="fa-solid fa-user"></i><span>Me</span></button>
+        <button data-nav="home" style="--c:#aa1f1b" onclick="show('home')"><i class="fa-solid fa-house"></i><span>Home</span></button>
+        <button data-nav="watch" style="--c:#b6940b" onclick="show('watch')"><i class="fa-solid fa-circle-play"></i><span>Watch</span></button>
+        <button data-nav="media" style="--c:#045c6b" onclick="show('media')"><i class="fa-solid fa-share-nodes"></i><span>Media</span></button>
+        <button data-nav="wall" style="--c:#d63384" onclick="show('wall')"><i class="fa-solid fa-circle-notch"></i><span>Stories</span></button>
+        <button id="navMe" data-nav="me" style="--c:#7b3fe4" onclick="showMe()"><i class="fa-solid fa-user"></i><span>Me</span></button>
     </nav>
 
     <!-- ============ STORY VIEWER (full screen) ============ -->

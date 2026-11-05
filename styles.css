@@ -102,4 +102,69 @@ textarea:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
 .cmp-caption { position: absolute; left: .75rem; right: .75rem; bottom: .75rem; background: rgba(0,0,0,.5); color: #fff; border-radius: .75rem; padding: .6rem .8rem; border: 0; }
 .swatch { width: 1.9rem; height: 1.9rem; border-radius: 999px; border: 2px solid rgba(255,255,255,.35); }
 .swatch.on { border-color: #fff; box-shadow: 0 0 0 2px var(--gold-light); }
-.hero-video { display: block; width: 100%; max-width: 320px; height: auto; aspect-ratio: 1 / 1; background: #fff; border-radius: 1rem; }
+.hero-video { display: block; width: 100%; height: auto; aspect-ratio: 1 / 1; background: #fff; border-radius: 50%; }
+/* ===== Public redesign: "white garment, colourful sashes" =====
+   White is the garment; colour comes in as sashes (pink, purple, gold, sky, green) like the units on a Celestial Sunday. */
+:root { --pink: #d63384; --royal: #7b3fe4; --sky: #3fa9f5; --sun: #f5c518; --display: "Bricolage Grotesque", system-ui, sans-serif; }
+.hero-band { position: relative; overflow: hidden; color: #fff;
+    background: radial-gradient(90% 60% at 85% 10%, rgba(255,95,162,.55), transparent 60%),
+                radial-gradient(80% 60% at 0% 100%, rgba(63,169,245,.5), transparent 60%),
+                linear-gradient(160deg, #773246 0%, #4b1d6b 45%, #031d48 100%); }
+.ribbons { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.rib { fill: none; stroke-width: 14; stroke-linecap: round; opacity: .85; stroke-dasharray: 520 120; animation: flow 14s linear infinite; }
+.r1 { stroke: var(--sun); } .r2 { stroke: var(--pink); stroke-width: 9; animation-duration: 18s; }
+.r3 { stroke: #0fb37a; stroke-width: 10; animation-duration: 16s; } .r4 { stroke: var(--sky); stroke-width: 12; animation-duration: 20s; }
+@keyframes flow { to { stroke-dashoffset: -640; } }
+.hero-inner { position: relative; }
+.praise-big { font-family: var(--display); font-weight: 800; font-size: 2.6rem; line-height: 1; letter-spacing: -.02em; text-shadow: 0 3px 0 rgba(0,0,0,.18); }
+.welcome-line { font-family: var(--display); font-weight: 600; font-size: 1.1rem; color: var(--gold-light); margin-top: .35rem; }
+.garment-frame { width: 230px; height: 230px; margin: 1.1rem auto 1rem; padding: 7px; border-radius: 50%;
+    background: conic-gradient(var(--rb-1), var(--sun), #0fb37a, var(--sky), var(--royal), var(--pink), var(--rb-1)); animation: sway 6s ease-in-out infinite; }
+.garment-frame video { border: 5px solid #fff; }
+@keyframes sway { 0%,100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+.hero-title { font-family: var(--display); font-weight: 800; font-size: 1.55rem; line-height: 1.1; }
+.hero-sub { font-size: .8rem; font-weight: 600; color: rgba(255,255,255,.85); margin-top: .25rem; }
+.hero-about { font-size: .9rem; color: rgba(255,255,255,.9); max-width: 20rem; margin: .8rem auto 0; }
+.btn-sun { background: var(--sun); color: #031d48; box-shadow: 0 4px 0 #b6940b; }
+.btn-white { background: #fff; color: #4b1d6b; box-shadow: 0 4px 0 rgba(0,0,0,.2); }
+.btn-sun:active, .btn-white:active { transform: translateY(2px); box-shadow: none; }
+.praise-marquee { overflow: hidden; background: var(--sun); color: #031d48; font-family: var(--display); font-weight: 800; font-size: .95rem; padding: .55rem 0; }
+.pm-track { display: flex; width: max-content; animation: marquee 30s linear infinite; }
+.pm-track span { padding: 0 .9rem; } .pm-track span::after { content: "✦"; color: var(--pink); margin-left: 1.8rem; }
+@keyframes marquee { to { transform: translateX(-50%); } }
+.band { position: relative; }
+.band-sun { background: linear-gradient(180deg, #fff8dc 0%, #ffffff 70%); }
+.band-peacock { background: radial-gradient(70% 50% at 100% 0%, rgba(15,179,122,.45), transparent 70%), linear-gradient(170deg, #045c6b 0%, #0a4923 55%, #031d48 100%); }
+.band-sky { background: linear-gradient(180deg, #e6f4ff 0%, #ffffff 80%); }
+.band-rose { background: linear-gradient(180deg, #fde8f2 0%, #ffffff 80%); }
+.sec-title { font-family: var(--display); font-weight: 800; font-size: 1.5rem; line-height: 1.15; color: var(--navy); display: flex; align-items: center; gap: .6rem; }
+.sec-sub { font-size: .85rem; color: #4b5563; margin-top: .25rem; }
+.sash { width: 1.6rem; height: .55rem; border-radius: 99px; background: var(--s); transform: rotate(-25deg); flex: 0 0 auto; }
+.svc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+.svc { position: relative; overflow: hidden; background: #fff; border-radius: 1.1rem; padding: .85rem .8rem .8rem; display: flex; flex-direction: column; gap: .2rem;
+    border: 2px solid color-mix(in srgb, var(--c) 25%, #fff); }
+.svc::before { content: ""; position: absolute; right: -1.2rem; top: .5rem; width: 4.5rem; height: .7rem; background: var(--c); transform: rotate(-35deg); opacity: .9; }
+.svc i { width: 2.3rem; height: 2.3rem; border-radius: 50%; display: grid; place-items: center; background: var(--c); color: #fff; font-size: 1rem; margin-bottom: .3rem; }
+.svc b { color: var(--navy); font-size: .88rem; line-height: 1.25; }
+.svc span { color: #6b7280; font-size: .75rem; }
+.gallery-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; grid-auto-flow: dense; }
+.g-item { position: relative; margin: 0; border-radius: 1rem; overflow: hidden; aspect-ratio: 1 / 1; background: rgba(255,255,255,.1); }
+.g-item.wide { grid-column: span 2; aspect-ratio: 16 / 10; }
+.g-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.g-item figcaption { position: absolute; left: .5rem; bottom: .5rem; background: rgba(255,255,255,.92); color: var(--navy); font-weight: 800; font-size: .72rem; padding: .2rem .6rem; border-radius: 99px; }
+.readings-card { background: #fff; border-radius: 1.1rem; padding: 1rem; border-left: 6px solid var(--sky); }
+.visit-btn { display: block; text-align: center; padding: .75rem; border-radius: 99px; font-weight: 800; font-size: .85rem; color: #fff; background: var(--c); }
+.jump { text-align: left; border-radius: 1.1rem; padding: 1rem; color: #fff; font-weight: 800; font-size: .9rem; background: linear-gradient(140deg, var(--c), color-mix(in srgb, var(--c) 60%, #000)); display: flex; flex-direction: column; gap: .5rem; }
+.jump i { font-size: 1.3rem; }
+/* Colourful bottom nav: each tab wears its own sash colour. */
+.bottom-nav { border-top: 0; box-shadow: 0 -2px 12px rgba(3,29,72,.08); }
+.bottom-nav::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #aa1f1b, var(--sun), #0fb37a, var(--sky), var(--royal), var(--pink)); }
+.bottom-nav button i { color: var(--c); opacity: .55; }
+.bottom-nav button.on { color: var(--c); }
+.bottom-nav button.on i { color: var(--c); opacity: 1; transform: translateY(-2px) scale(1.15); transition: transform .2s; }
+button:focus-visible, a:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .rib, .garment-frame, .pm-track { animation: none; } }
+/* Yoruba tone marks (ẹ, ọ̀) need a font with full combining-mark support. */
+.welcome-line, .pm-track { font-family: "Noto Sans", system-ui, sans-serif; font-weight: 800; }
+.rib { opacity: .6; }
+.svc b { overflow-wrap: anywhere; }

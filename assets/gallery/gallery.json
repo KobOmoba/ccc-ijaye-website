@@ -1,0 +1,35 @@
+{
+  "_how": "Drop real photos (jpg/webp, about 1200px wide) in assets/gallery/ and list them here in order. 'src' can also be a full https:// link. 'wide': true makes the photo span two columns. Delete the placeholder lines when real photos arrive.",
+  "photos": [
+    {
+      "src": "assets/gallery/placeholder-1.svg",
+      "caption": "Sunday praise",
+      "wide": true
+    },
+    {
+      "src": "assets/gallery/placeholder-2.svg",
+      "caption": "Choir",
+      "wide": false
+    },
+    {
+      "src": "assets/gallery/placeholder-3.svg",
+      "caption": "Harvest",
+      "wide": false
+    },
+    {
+      "src": "assets/gallery/placeholder-4.svg",
+      "caption": "Youth",
+      "wide": false
+    },
+    {
+      "src": "assets/gallery/placeholder-5.svg",
+      "caption": "Procession",
+      "wide": true
+    },
+    {
+      "src": "assets/gallery/placeholder-6.svg",
+      "caption": "Thanksgiving",
+      "wide": false
+    }
+  ]
+}
